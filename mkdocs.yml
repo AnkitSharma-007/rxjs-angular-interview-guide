@@ -1,0 +1,105 @@
+# Project information
+site_name: RxJS Angular interview guide
+site_description: A comprehensive, open-source RxJS interview guide tailored for Angular developers. Includes real-world questions, detailed answers, and code examples to help you ace your next interview.
+site_author: Ankit Sharma
+
+# Repository
+repo_name: "RxJS Angular interview guide"
+repo_url: "https://github.com/AnkitSharma-007/rxjs-angular-interview-guide"
+
+# Navigation
+nav:
+  - "Overview":
+      - index.md
+      - "Observable": observable.md
+      - "Observer": observer.md
+      - "Cold Observables": cold-observables.md
+      - "Hot Observables": hot-observables.md
+
+  - "Operators":
+      - "RxJS operators": Operators/RxJS-operators.md
+      - "Combination":
+          - "combineLatest": Operators/Combination/combineLatest.md
+          - "forkJoin": Operators/Combination/forkJoin.md
+      - "Creation":
+          - "empty VS never": Operators/Creation/empty-never.md
+          - "from": Operators/Creation/from.md
+          - "interval": Operators/Creation/interval.md
+          - "of": Operators/Creation/of.md
+          - "timer": Operators/Creation/timer.md
+      - "Filtering":
+          - "debounceTime": Operators/Filtering/debounceTime.md
+          - "distinctUntilChanged": Operators/Filtering/distinctUntilChanged.md
+          - "filter": Operators/Filtering/filter.md
+          - "first": Operators/Filtering/first.md
+          - "last": Operators/Filtering/last.md
+          - "skip": Operators/Filtering/skip.md
+          - "take": Operators/Filtering/take.md
+          - "takeUntil": Operators/Filtering/takeUntil.md
+      - "Transformation":
+          - "concatMap": Operators/Transformation/concatMap.md
+          - "exhaustMap": Operators/Transformation/exhaustMap.md
+          - "map": Operators/Transformation/map.md
+          - "mergeMap": Operators/Transformation/mergeMap.md
+          - "switchMap": Operators/Transformation/switchMap.md
+          - "switchMap Vs mergeMap Vs concatMap": Operators/Transformation/switchMap-mergeMap-concatMap.md
+
+  # - "Operators":
+  #     Operators/RxJS-operators.md
+  #   - "Creation":
+  #     - "from": \pages\Operators\Creation\from.md
+  #     # - "of": docs\pages\Operators\Creation\of.md
+  #     # - "interval": docs\pages\Operators\Creation\interval.md
+  #     # - "timer": docs\pages\Operators\Creation\timer.md
+
+# Configuration
+theme:
+  name: material
+  language: "en"
+  font:
+    text: Roboto
+    code: Roboto Mono
+  logo: assets/Rx_Logo.png
+  favicon: assets/favicon.ico
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to system preference
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.footer
+    - navigation.indexes
+    - navigation.tracking
+
+extra:
+  social:
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/ankitsharma-007
+    - icon: fontawesome/brands/square-x-twitter
+      link: https://twitter.com/ankitsharma_007
+
+extra_css:
+  - stylesheets/extra.css
+
+# Extensions
+markdown_extensions:
+  - attr_list
+  - codehilite:
+      guess_lang: false
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.betterem
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
