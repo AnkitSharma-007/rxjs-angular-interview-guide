@@ -21,12 +21,18 @@ nav:
       - "Combination":
           - "combineLatest": Operators/Combination/combineLatest.md
           - "forkJoin": Operators/Combination/forkJoin.md
+          - "zip": Operators/Combination/zip.md
+          - "withLatestFrom": Operators/Combination/withLatestFrom.md
       - "Creation":
           - "empty VS never": Operators/Creation/empty-never.md
           - "from": Operators/Creation/from.md
           - "interval": Operators/Creation/interval.md
           - "of": Operators/Creation/of.md
           - "timer": Operators/Creation/timer.md
+      - "Error Handeling":
+          - "catchError": Operators/Error/catchError.md
+          - "retry": Operators/Error/retry.md
+          - "retryWhen": Operators/Error/retryWhen.md
       - "Filtering":
           - "debounceTime": Operators/Filtering/debounceTime.md
           - "distinctUntilChanged": Operators/Filtering/distinctUntilChanged.md
@@ -36,6 +42,14 @@ nav:
           - "skip": Operators/Filtering/skip.md
           - "take": Operators/Filtering/take.md
           - "takeUntil": Operators/Filtering/takeUntil.md
+      - "Multicasting":
+          - "share": Operators/Multicasting/share.md
+          - "shareReplay": Operators/Multicasting/shareReplay.md
+      - "Subjects":
+          - "subject": Operators/Subjects/subject.md
+          - "behaviorSubject": Operators/Subjects/behaviorSubject.md
+          - "replaySubject": Operators/Subjects/replaySubject.md
+          - "Subject Vs BehaviorSubject Vs ReplaySubject": Operators/Subjects/subject-behaviorSubject-replaySubject.md
       - "Transformation":
           - "concatMap": Operators/Transformation/concatMap.md
           - "exhaustMap": Operators/Transformation/exhaustMap.md
@@ -43,14 +57,6 @@ nav:
           - "mergeMap": Operators/Transformation/mergeMap.md
           - "switchMap": Operators/Transformation/switchMap.md
           - "switchMap Vs mergeMap Vs concatMap": Operators/Transformation/switchMap-mergeMap-concatMap.md
-
-  # - "Operators":
-  #     Operators/RxJS-operators.md
-  #   - "Creation":
-  #     - "from": \pages\Operators\Creation\from.md
-  #     # - "of": docs\pages\Operators\Creation\of.md
-  #     # - "interval": docs\pages\Operators\Creation\interval.md
-  #     # - "timer": docs\pages\Operators\Creation\timer.md
 
 # Configuration
 theme:
@@ -97,7 +103,7 @@ markdown_extensions:
       guess_lang: false
   - footnotes
   - toc:
-      permalink: true
+      permalink: "#"
   - pymdownx.betterem
   - pymdownx.superfences
   - pymdownx.tabbed:

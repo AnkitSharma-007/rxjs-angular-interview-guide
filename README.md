@@ -38,5 +38,3 @@ And more as we grow!
 Have a great example, question, or operator to add? PRs are open! Let’s make this the go-to resource for RxJS interview prep in the Angular world.
 
 ---
-
-Let me know if you want badges, table of contents, or starter files (`CONTRIBUTING.md`, etc.) too!
