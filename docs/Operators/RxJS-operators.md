@@ -70,10 +70,10 @@ Think of operators as tools in a workshop for working with your asynchronous dat
 - **Purpose:** Miscellaneous operators useful for debugging, controlling timing, or other side effects.
 - **Examples:**
 
-      - `tap(value => console.log(value))`: Perform side effects (like logging) for each emission without modifying the stream itself. (Formerly known as `do`).
-      - `delay(1000)`: Delays the emission of each item by a specified time.
-      - `timeout(5000)`: Emits an error if the source Observable doesn't emit a value within a specified time.
-      - `finalize(() => console.log('Stream finished'))`: Executes a callback function when the source Observable completes or errors. Good for cleanup logic.
+      - [`tap`](../Operators/Utility/tap.md): Perform side effects (like logging) for each emission without modifying the stream itself. (Formerly known as `do`).
+      - [`delay`](../Operators/Utility/delay.md): Delays the emission of each item by a specified time.
+      - [`timeout`](../Operators/Utility/timeout.md): Emits an error if the source Observable doesn't emit a value within a specified time.
+      - [`finalize`](../Operators/Utility/finalize.md): Executes a callback function when the source Observable completes or errors. Good for cleanup logic.
       - `toArray()`: Collects all source emissions into a single array and emits that array when the source completes.
 
 ## Multicasting Operators

@@ -9,8 +9,9 @@ repo_url: "https://github.com/AnkitSharma-007/rxjs-angular-interview-guide"
 
 # Navigation
 nav:
-  - "Overview":
+  - "Home":
       - index.md
+  - "Overview":
       - "Observable": observable.md
       - "Observer": observer.md
       - "Cold Observables": cold-observables.md
@@ -37,6 +38,7 @@ nav:
           - "debounceTime": Operators/Filtering/debounceTime.md
           - "distinctUntilChanged": Operators/Filtering/distinctUntilChanged.md
           - "filter": Operators/Filtering/filter.md
+          - "find": Operators/Filtering/find.md
           - "first": Operators/Filtering/first.md
           - "last": Operators/Filtering/last.md
           - "skip": Operators/Filtering/skip.md
@@ -57,6 +59,11 @@ nav:
           - "mergeMap": Operators/Transformation/mergeMap.md
           - "switchMap": Operators/Transformation/switchMap.md
           - "switchMap Vs mergeMap Vs concatMap": Operators/Transformation/switchMap-mergeMap-concatMap.md
+      - "Utility":
+          - "delay": Operators/Utility/delay.md
+          - "finalize": Operators/Utility/finalize.md
+          - "tap": Operators/Utility/tap.md
+          - "timeout": Operators/Utility/timeout.md
 
 # Configuration
 theme:

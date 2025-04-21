@@ -2,6 +2,10 @@
 
 Welcome to the **RxJS Interview Guide for Angular Developers** — a curated, open-source resource designed to help you **master RxJS operators** and **crack interviews with confidence**. Whether you're brushing up for a job interview or deepening your understanding of reactive programming in Angular, this guide has you covered.
 
+## 🌐 Live Site
+
+You can explore the full guide as a searchable, categorized site at [RxJS Angular interview guide](https://ankitsharma-007.github.io/rxjs-angular-interview-guide/).
+
 ## 🚀 What’s Inside?
 
 This guide focuses on **frequently used RxJS operators in real-world Angular applications**, categorized for easy access and faster learning. For each operator, you'll find:
@@ -35,6 +39,4 @@ And more as we grow!
 
 ## 🤝 Contributions Welcome
 
-Have a great example, question, or operator to add? PRs are open! Let’s make this the go-to resource for RxJS interview prep in the Angular world.
-
----
+Have a great example, question, or operator to add? PRs are welcome! Let’s make this the go-to resource for RxJS interview prep in the Angular world.
