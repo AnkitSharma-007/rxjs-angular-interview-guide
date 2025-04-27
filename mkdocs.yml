@@ -16,7 +16,8 @@ nav:
       - "Observer": observer.md
       - "Cold Observables": cold-observables.md
       - "Hot Observables": hot-observables.md
-
+      - "Promise Vs Observable": promise-vs-observable.md
+      - "Async pipe": async-pipe.md
   - "Operators":
       - "RxJS operators": Operators/RxJS-operators.md
       - "Combination":
