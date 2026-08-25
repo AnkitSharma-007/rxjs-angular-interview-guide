@@ -11,6 +11,13 @@ tags:
 
 Think of it like starting several independent tasks (e.g., downloading multiple files, making several API requests). `forkJoin` waits patiently until every single one of those tasks signals "I'm finished!". Once the last task completes, `forkJoin` emits a _single_ value, which is an array containing the _very last value_ emitted by each of the input Observables, in the same order you provided them.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `forkJoin([a$, b$])` or the dictionary form `forkJoin({ user: user$, prefs: prefs$ })`
+    - **Use when:** running parallel one-shot operations (HTTP calls) and proceeding only with all final results
+    - **Avoid when:** any source never completes (`valueChanges`, Subjects, intervals); `forkJoin` would never emit
+    - **Top gotcha:** a single uncaught error in any source kills the whole join and discards every other result
+
 ## Key Characteristics
 
 1.  **Waits for Completion:** It doesn't emit anything until _every_ input Observable finishes (completes).
@@ -18,6 +25,20 @@ Think of it like starting several independent tasks (e.g., downloading multiple 
 3.  **Single Emission:** It emits only _one_ value (or an error).
 4.  **Array of Last Values:** The emitted value is an array containing the _last_ value from each input Observable.
 5.  **Error Behavior:** If _any_ of the input Observables error out, `forkJoin` immediately errors out as well. It will _not_ wait for the other Observables to complete and will _not_ emit the array of results.
+
+## Minimal Example
+
+```typescript
+import { forkJoin, map, timer } from "rxjs";
+
+forkJoin([
+  timer(300).pipe(map(() => "fast")),
+  timer(900).pipe(map(() => "slow")),
+]).subscribe(console.log);
+
+// after ~900ms: ["fast", "slow"]
+// one emission, the LAST value of each source, in input order
+```
 
 ## Real-World Analogy
 
@@ -37,7 +58,7 @@ Because `forkJoin` fails completely if any input stream errors, you often want t
 
 ```typescript
 import { forkJoin, of, timer, throwError } from "rxjs";
-import { delay, catchError } from "rxjs/operators";
+import { catchError, delay, map } from "rxjs";
 
 const successful$ = of("Success Data").pipe(delay(500));
 
@@ -89,10 +110,9 @@ forkJoin completed with results: [ 'Success Data', null ]
 `forkJoin` is perfect for loading all the essential data a component needs before displaying anything.
 
 ```typescript
-import { Component, OnInit } from "@angular/core";
+import { Component, inject, signal } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { forkJoin, of } from "rxjs";
-import { catchError } from "rxjs/operators";
+import { catchError, forkJoin, of } from "rxjs";
 
 interface UserProfile {
   name: string;
@@ -110,99 +130,97 @@ interface InitialNotifications {
 @Component({
   selector: "app-profile-page",
   template: `
-    <div *ngIf="!isLoading && !errorMsg">
-      <h2>Profile: {{ profile?.name }}</h2>
-      <p>Email: {{ profile?.email }}</p>
-      <p>Theme: {{ preferences?.theme }}</p>
-      <p>Notifications: {{ notifications?.count }}</p>
-    </div>
-    <div *ngIf="isLoading">Loading profile data...</div>
-    <div *ngIf="errorMsg" style="color: red;">{{ errorMsg }}</div>
+    @if (loading()) {
+      <div>Loading profile data...</div>
+    } @else if (errorMsg()) {
+      <div style="color: red;">{{ errorMsg() }}</div>
+    } @else {
+      <h2>Profile: {{ profile()?.name }}</h2>
+      <p>Email: {{ profile()?.email }}</p>
+      <p>Theme: {{ preferences()?.theme }}</p>
+      <p>Notifications: {{ notifications()?.count }}</p>
+    }
   `,
 })
-export class ProfilePageComponent implements OnInit {
-  isLoading = true;
-  errorMsg: string | null = null;
+export class ProfilePageComponent {
+  private readonly http = inject(HttpClient);
 
-  profile: UserProfile | null = null;
-  preferences: UserPreferences | null = null;
-  notifications: InitialNotifications | null = null;
+  protected readonly loading = signal(true);
+  protected readonly errorMsg = signal<string | null>(null);
+  protected readonly profile = signal<UserProfile | null>(null);
+  protected readonly preferences = signal<UserPreferences | null>(null);
+  protected readonly notifications = signal<InitialNotifications | null>(null);
 
-  constructor(private http: HttpClient) {}
-
-  ngOnInit() {
+  constructor() {
     this.loadData();
   }
 
-  loadData() {
-    this.isLoading = true;
-    this.errorMsg = null;
+  loadData(): void {
+    this.loading.set(true);
+    this.errorMsg.set(null);
 
-    // Define the API calls - HttpClient observables complete automatically
-    const profile$ = this.http.get<UserProfile>("/api/profile").pipe(
-      catchError((err) => {
-        console.error("Failed to load Profile", err);
-        // Return fallback and let forkJoin continue
-        return of(null);
-      }),
-    );
-
+    // catch per request so one failure cannot sink the whole join
+    const profile$ = this.http
+      .get<UserProfile>("/api/profile")
+      .pipe(catchError(() => of(null)));
     const preferences$ = this.http
       .get<UserPreferences>("/api/preferences")
-      .pipe(
-        catchError((err) => {
-          console.error("Failed to load Preferences", err);
-          // Return fallback and let forkJoin continue
-          return of(null);
-        }),
-      );
-
+      .pipe(catchError(() => of(null)));
     const notifications$ = this.http
       .get<InitialNotifications>("/api/notifications")
-      .pipe(
-        catchError((err) => {
-          console.error("Failed to load Notifications", err);
-          // Return fallback and let forkJoin continue
-          return of({ count: 0, messages: [] }); // Example fallback
-        }),
-      );
+      .pipe(catchError(() => of({ count: 0, messages: [] })));
 
-    // Use forkJoin to wait for all requests
-    forkJoin([profile$, preferences$, notifications$]).subscribe(
-      ([profileResult, preferencesResult, notificationsResult]) => {
-        // This block runs when all API calls have completed (successfully or with handled errors)
-        console.log("All data received:", {
-          profileResult,
-          preferencesResult,
-          notificationsResult,
-        });
-
-        // Check if essential data is missing
-        if (!profileResult || !preferencesResult) {
-          this.errorMsg =
-            "Could not load essential profile data. Please try again later.";
-        } else {
-          this.profile = profileResult;
-          this.preferences = preferencesResult;
-          this.notifications = notificationsResult; // Notifications might be optional or have a fallback
-        }
-
-        this.isLoading = false;
-      },
-      (err) => {
-        // This error handler is less likely to be hit if catchError is used inside,
-        // but good practice to have for unexpected issues.
-        console.error("Unexpected error in forkJoin:", err);
-        this.errorMsg = "An unexpected error occurred while loading data.";
-        this.isLoading = false;
-      },
-    );
+    // dictionary form: results arrive as a named object, not a positional array
+    forkJoin({
+      profile: profile$,
+      preferences: preferences$,
+      notifications: notifications$,
+    }).subscribe(({ profile, preferences, notifications }) => {
+      if (!profile || !preferences) {
+        this.errorMsg.set(
+          "Could not load essential profile data. Please try again later.",
+        );
+      } else {
+        this.profile.set(profile);
+        this.preferences.set(preferences);
+        this.notifications.set(notifications);
+      }
+      this.loading.set(false);
+    });
   }
 }
 ```
 
-In this example, the component makes three API calls. The `forkJoin` ensures that the loading indicator stays active until _all three_ requests are finished. By using `catchError` inside each request, we prevent one failed request from stopping the others, and we can handle missing data appropriately in the `next` callback of `forkJoin`.
+In this example, the component makes three API calls. The `forkJoin` ensures that the loading state stays active until _all three_ requests are finished. By using `catchError` inside each request, we prevent one failed request from stopping the others, and we can handle missing data appropriately in the subscriber. Because `HttpClient` observables complete, `forkJoin` emits exactly once and no manual unsubscribe is needed.
+
+## Common Mistakes
+
+**Passing sources that never complete.** `forkJoin` waits for **completion**, not just emission. A `valueChanges`, `Subject`, or `interval` input means it never emits at all. Bound such sources with `take(1)`/`first()` or rethink the operator choice.
+
+**Skipping per-source error handling.** One failed request errors the join and throws away every other response. Attach `catchError` to each source with a fallback value so the join always resolves.
+
+**Positional arrays for many sources.** `results[3]` invites off-by-one bugs on refactor. The dictionary form gives named results and survives reordering.
+
+## Interview Q&A
+
+??? question "What happens if one forkJoin source errors?"
+
+    The join errors immediately, unsubscribes from the remaining sources, and emits none of the results. That is why production code catches errors per source and maps them to fallback values that still complete.
+
+??? question "Why is forkJoin often compared to Promise.all?"
+
+    Same contract: run in parallel, resolve once with all results, reject on first failure. The differences: forkJoin works with streams (it takes the **last** value of each) and is lazy: nothing runs until subscription.
+
+??? question "When would combineLatest be the better choice?"
+
+    When the sources keep emitting and you want ongoing combined updates rather than one final snapshot: live filters, form + data combinations. `forkJoin` is for finite, completing work.
+
+## Related
+
+- [combineLatest](combineLatest.md) for continuous combination of live streams
+- [zip](zip.md) for pairing emissions by index
+- [catchError](../error-handling/catchError.md), the essential companion for resilient joins
 
 ## Summary
 
-use `forkJoin` when you need to run several asynchronous operations (that eventually complete) in parallel and only want to proceed once you have the final result from _all_ of them. Remember its strict error handling behavior and use `catchError` internally if necessary.
+Use `forkJoin` when you need to run several asynchronous operations (that eventually complete) in parallel and only want to proceed once you have the final result from _all_ of them. Remember its strict error handling behavior and use `catchError` internally if necessary.

@@ -14,6 +14,13 @@ tags:
 3.  **Provide a fallback value:** Return a default value or an empty state so the stream can continue gracefully instead of just terminating.
 4.  **Re-throw the error:** If you can't handle it, you can let the error propagate further down the chain to the subscriber's error handler.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `catchError((error, caught$) => ObservableInput)`
+    - **Use when:** recovering with fallback values, mapping errors to UI state, or rethrowing enriched errors
+    - **Avoid when:** you actually want to retry; put [`retry`](retry.md) **before** `catchError`
+    - **Top gotcha:** by the time `catchError` runs, the source stream is already dead; a fallback replaces it, it does not resume it
+
 ## How `catchError` Works
 
 - You place `catchError` inside the `.pipe()` method.
@@ -22,6 +29,27 @@ tags:
   - If you return `of(someDefaultValue)` (e.g., `of([])`, `of(null)`), the outer stream will receive that default value in its `next` handler, and then it will _complete_ successfully (it won't hit the `error` handler of the subscription).
   - If you return `EMPTY` (from RxJS), the outer stream simply completes without emitting any further values.
   - If you `throw error` (or `throw new Error(...)`) inside the `catchError` function, the error is passed along to the `error` handler of your `subscribe` block (or the next `catchError` downstream).
+
+## Minimal Example
+
+```typescript
+import { catchError, map, of } from "rxjs";
+
+of(1, 2, 3)
+  .pipe(
+    map((n) => {
+      if (n === 2) throw new Error("boom");
+      return n;
+    }),
+    catchError(() => of(-1)), // replace the failed stream with a fallback
+  )
+  .subscribe({
+    next: console.log,
+    complete: () => console.log("complete"),
+  });
+
+// 1, -1, complete   (3 is never emitted: the source died at the error)
+```
 
 ## Real-World Example: Handling HTTP Request Errors
 
@@ -34,8 +62,7 @@ Let's create a component that tries to fetch user data. We'll use `catchError` t
 ```typescript
 import { Component, DestroyRef, inject, OnInit, signal } from "@angular/core";
 import { HttpClient, HttpErrorResponse } from "@angular/common/http";
-import { Observable, of, EMPTY, throwError } from "rxjs"; // Import 'of', 'EMPTY', 'throwError'
-import { catchError, tap } from "rxjs/operators";
+import { Observable, of, EMPTY, throwError, catchError, tap } from "rxjs";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 
 interface User {
@@ -46,19 +73,23 @@ interface User {
 
 @Component({
   selector: "app-user-profile",
-  standalone: true,
-  imports: [], // Add CommonModule if using *ngIf/*ngFor later
   template: `
     <h2>User Profile</h2>
-    <div *ngIf="loading()">Loading user data...</div>
+    @if (loading()) {
+      <div>Loading user data...</div>
+    }
 
-    <div *ngIf="user() as userData">
-      <p>ID: {{ userData.id }}</p>
-      <p>Name: {{ userData.name }}</p>
-      <p>Email: {{ userData.email }}</p>
-    </div>
+    @if (user(); as userData) {
+      <div>
+        <p>ID: {{ userData.id }}</p>
+        <p>Name: {{ userData.name }}</p>
+        <p>Email: {{ userData.email }}</p>
+      </div>
+    }
 
-    <div *ngIf="errorMsg()" style="color: red;">Error: {{ errorMsg() }}</div>
+    @if (errorMsg()) {
+      <div style="color: red;">Error: {{ errorMsg() }}</div>
+    }
 
     <button (click)="loadUser()" [disabled]="loading()">Reload User</button>
   `,
@@ -157,7 +188,7 @@ export class UserProfileComponent implements OnInit {
 
 **Explanation:**
 
-1.  `WorkspaceUserData` makes an HTTP GET request using `HttpClient`.
+1.  `fetchUserData` makes an HTTP GET request using `HttpClient`.
 2.  We `.pipe()` the result through `catchError`.
 3.  If the HTTP request fails (e.g., returns 404 Not Found), the `catchError` function executes.
 4.  Inside `catchError`:
@@ -166,8 +197,36 @@ export class UserProfileComponent implements OnInit {
     - We set `loading` to false.
     - **Crucially, we return `of(null)`.** This creates a _new_ observable that emits `null` once and then completes.
 5.  Because `catchError` returned `of(null)`, the original stream is considered "handled." The `subscribe` block's `next` handler receives `null`. The component updates the `user` signal to `null` and the `error` handler _is not_ executed. The stream completes normally.
-6.  The template uses `*ngIf` directives bound to the signals (`user()`, `errorMsg()`, `loading()`) to conditionally display the user data, the loading indicator, or the error message.
+6.  The template uses `@if` blocks bound to the signals (`user()`, `errorMsg()`, `loading()`) to conditionally display the user data, the loading indicator, or the error message.
 
 If we had chosen Strategy 3 (using `throwError`), the error _would_ propagate to the `subscribe` block's `error` handler.
 
 `catchError` is essential for building robust Angular applications that can gracefully handle failures in asynchronous operations like API calls.
+
+## Common Mistakes
+
+**Catching at the wrong level.** In `source$.pipe(switchMap(fetch), catchError(...))`, an HTTP failure replaces the **outer** stream and the pipeline never reacts to the source again. Put `catchError` on the inner Observable inside `switchMap` when the outer stream must survive.
+
+**Expecting the stream to resume.** After an error, the original source is terminated. `catchError` swaps in a replacement Observable; it cannot "skip the bad value and continue". If per-item resilience is needed, isolate each item's work in an inner Observable.
+
+**Swallowing errors.** `catchError(() => EMPTY)` with no logging or UI feedback turns failures into silent mysteries. Always log or surface something before recovering.
+
+## Interview Q&A
+
+??? question "Why must the catchError callback return an Observable?"
+
+    Because subscribers stay subscribed to *something*: `catchError` unsubscribes from the failed source and transparently subscribes the consumer to the returned Observable. Returning `of(fallback)` yields one value then completion; returning `EMPTY` completes silently; throwing (or `throwError`) propagates a (possibly transformed) error.
+
+??? question "Where does catchError go in a typeahead pipeline and why?"
+
+    Inside the higher-order mapping operator, on the HTTP Observable itself. There, a failed request emits a fallback (like an empty result list) and only that one request's stream dies; the `valueChanges` pipeline keeps working for the next keystroke.
+
+??? question "What is the second argument catchError receives?"
+
+    `caught$`, the source Observable. Returning it resubscribes from scratch, an instant naive retry loop: `catchError((err, caught$) => caught$)` retries forever. Prefer `retry` with a count and delay for controlled behavior.
+
+## Related
+
+- [retry](retry.md), which belongs **before** catchError when transient failures deserve another attempt
+- [finalize](../utility/finalize.md) for cleanup that must run on success, error, or unsubscribe
+- [switchMap](../transformation/switchMap.md) for the inner-vs-outer placement discussion

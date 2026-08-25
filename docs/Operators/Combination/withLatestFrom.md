@@ -14,6 +14,13 @@ Think of `withLatestFrom()` as an operator that lets one stream (the "source") p
 - **How it works:** When the **source** stream emits a value, `withLatestFrom()` looks at the **other** streams and grabs their _latest_ emitted value. It then combines the value from the source stream and the latest values from the other streams into an array.
 - **Important:** It only emits when the **source** stream emits. If the other streams emit values but the source stream hasn't emitted since, `withLatestFrom()` does nothing. Also, it won't emit anything until _all_ the provided streams (source and others) have emitted at least one value.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `source$.pipe(withLatestFrom(other$, ...))`
+    - **Use when:** an action needs a snapshot of other state at trigger time: a click plus the current form value
+    - **Avoid when:** changes in any stream should produce output; that is `combineLatest`
+    - **Top gotcha:** until every secondary stream has emitted once, source emissions are **dropped**, not buffered; give secondaries a `startWith`
+
 ## Real-World Example: Search with Filters
 
 Imagine you have a search page for products. There's:
@@ -28,27 +35,40 @@ You want to make an API call to fetch products whenever the user types in the se
 
 We want to trigger the search using the _latest_ filter value _at the moment_ the (debounced) search term is ready. `withLatestFrom()` is perfect for this.
 
+## Minimal Example
+
+```typescript
+import { Subject, withLatestFrom } from "rxjs";
+
+const saves$ = new Subject<string>(); // driver stream
+const draft$ = new Subject<string>(); // secondary stream
+
+saves$.pipe(withLatestFrom(draft$)).subscribe(console.log);
+
+draft$.next("draft v1"); // nothing: only the SOURCE triggers output
+draft$.next("draft v2");
+saves$.next("save"); // ["save", "draft v2"]  <- latest draft attached
+saves$.next("save"); // ["save", "draft v2"]
+```
+
 ## Code Snippet
 
 Let's see how this looks in an Angular component:
 
 ```typescript
-import { Component, inject, DestroyRef, OnInit } from "@angular/core";
-import { CommonModule } from "@angular/common";
+import { Component, inject, DestroyRef, OnInit, signal } from "@angular/core";
 import { ReactiveFormsModule, FormControl } from "@angular/forms";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import {
-  Subject,
   debounceTime,
   distinctUntilChanged,
   withLatestFrom,
-  takeUntilDestroyed,
   startWith,
 } from "rxjs";
 
 @Component({
   selector: "app-product-search",
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [ReactiveFormsModule],
   template: `
     <div>
       <label for="search">Search:</label>
@@ -64,11 +84,13 @@ import {
       </select>
     </div>
 
-    <div *ngIf="searchResults">
-      Searching for: "{{ searchResults.term }}" in category: "{{
-        searchResults.category
-      }}"
-    </div>
+    @if (searchResults(); as results) {
+      <div>
+        Searching for: "{{ results.term }}" in category: "{{
+          results.category
+        }}"
+      </div>
+    }
   `,
 })
 export class ProductSearchComponent implements OnInit {
@@ -76,11 +98,11 @@ export class ProductSearchComponent implements OnInit {
   private destroyRef = inject(DestroyRef); // For automatic unsubscription
 
   // --- Form Controls ---
-  searchTermControl = new FormControl("");
-  categoryFilterControl = new FormControl("all"); // Default category
+  searchTermControl = new FormControl("", { nonNullable: true });
+  categoryFilterControl = new FormControl("all", { nonNullable: true });
 
   // --- Component State ---
-  searchResults: { term: string; category: string } | null = null;
+  searchResults = signal<{ term: string; category: string } | null>(null);
 
   ngOnInit(): void {
     // --- Observables ---
@@ -88,12 +110,11 @@ export class ProductSearchComponent implements OnInit {
     const searchTerm$ = this.searchTermControl.valueChanges.pipe(
       debounceTime(400), // Wait for 400ms pause in typing
       distinctUntilChanged(), // Only emit if the value actually changed
-      startWith(this.searchTermControl.value || ""), // Emit initial value immediately
     );
 
-    // Other: Category filter
+    // Other: Category filter (startWith so a value exists before the user touches it)
     const categoryFilter$ = this.categoryFilterControl.valueChanges.pipe(
-      startWith(this.categoryFilterControl.value || "all"), // Emit initial value immediately
+      startWith(this.categoryFilterControl.value),
     );
 
     // --- Combining with withLatestFrom ---
@@ -103,22 +124,16 @@ export class ProductSearchComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef), // Auto-unsubscribe when component is destroyed
       )
       .subscribe(([term, category]) => {
-        // This block runs ONLY when searchTerm$ emits (after debounce)
-        // It gets the emitted 'term' and the 'latest' value from categoryFilter$
-
-        // Ensure we have non-null values (FormControl can emit null)
-        const validTerm = term ?? "";
-        const validCategory = category ?? "all";
-
+        // Runs ONLY when searchTerm$ emits (after debounce),
+        // with the latest category attached
         console.log(
-          `API Call Needed: Search for "${validTerm}" with filter "${validCategory}"`,
+          `API Call Needed: Search for "${term}" with filter "${category}"`,
         );
 
         // In a real app, you'd call your API service here:
-        // this.productService.search(validTerm, validCategory).subscribe(...)
+        // this.productService.search(term, category).subscribe(...)
 
-        // Update component state for display (example)
-        this.searchResults = { term: validTerm, category: validCategory };
+        this.searchResults.set({ term, category });
       });
   }
 }
@@ -137,3 +152,31 @@ export class ProductSearchComponent implements OnInit {
 6.  **`takeUntilDestroyed(this.destroyRef)`:** This is the modern Angular way to handle unsubscriptions. When the `ProductSearchComponent` is destroyed, this operator automatically completes the Observable stream, preventing memory leaks without manual cleanup.
 
 So, `withLatestFrom()` is incredibly useful when an action (like searching) depends on the latest state of other configuration or filter inputs at the exact moment the action is triggered.
+
+## Common Mistakes
+
+**No initial value on the secondary stream.** Until every secondary has emitted once, source emissions are silently dropped. A `valueChanges` the user has not touched emits nothing, so give it `startWith(control.value)`, as in the example.
+
+**Importing `takeUntilDestroyed` from `rxjs`.** It lives in `@angular/core/rxjs-interop`. The wrong import compiles in some editors' eyes but fails at build time, a surprisingly common copy-paste slip.
+
+**Expecting secondary changes to trigger a search.** Changing the category alone produces nothing here; only the source emits output. If both inputs should trigger, the operator you want is `combineLatest`.
+
+## Interview Q&A
+
+??? question "withLatestFrom vs combineLatest: how do you choose?"
+
+    Ask which streams should cause output. One driver stream with the others as passive context: `withLatestFrom`. Every stream an equal trigger: `combineLatest`. In UI terms: "search when the user types, using the current filter" vs "search when either the text or the filter changes".
+
+??? question "What happens to source values emitted before the secondaries have values?"
+
+    They are discarded, not queued. `withLatestFrom` cannot emit a partial tuple, and it does not retroactively emit when the secondary finally produces a value. That is why `startWith` (or `BehaviorSubject` secondaries) matter.
+
+??? question "Where does withLatestFrom shine in NgRx-style architectures?"
+
+    In effects: an action stream is the driver, and `withLatestFrom(store.select(...))` snapshots current state at the moment the action fires, without state changes triggering the effect.
+
+## Related
+
+- [combineLatest](combineLatest.md) when any input should trigger emission
+- [debounceTime](../filtering/debounceTime.md) and [distinctUntilChanged](../filtering/distinctUntilChanged.md), the usual source-side companions
+- [zip](zip.md) for index-based pairing

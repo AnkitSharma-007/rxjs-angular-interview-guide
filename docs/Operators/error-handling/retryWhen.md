@@ -19,6 +19,13 @@ It works like this:
 4.  **Retry Trigger:** The source Observable (e.g., your HTTP request) is **resubscribed to (retried)** _every time the notifier Observable emits a `next` value_.
 5.  **Stop Retrying:** If the notifier Observable emits an `error` or `complete` notification, the retrying stops, and the main Observable chain will emit that same `error` or `complete` notification.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `retryWhen((errors$) => notifier$)` (deprecated)
+    - **Use when:** maintaining older codebases or answering interview questions about legacy retry logic
+    - **Prefer instead:** `retry({ count, delay })`, which covers the same scenarios declaratively
+    - **Top gotcha:** a notifier that never errors or completes retries forever; termination is entirely your responsibility
+
 ## Key Points
 
 1.  **Error Input:** Operates on the stream of errors from the source.
@@ -43,6 +50,26 @@ Let's implement a classic **exponential backoff** strategy. If an HTTP request f
 - **Error Stream:** The `errors$` observable passed into `retryWhen`.
 - **Notifier Logic:** Calculate increasing delay based on retry count, emit after delay, but throw an error if max retries exceeded.
 
+## Modern Equivalent First
+
+Before studying the legacy pattern, here is the same exponential backoff with today's [`retry`](retry.md):
+
+```typescript
+import { retry, throwError, timer } from "rxjs";
+
+this.http.get<UserData>(this.apiUrl).pipe(
+  retry({
+    count: 3,
+    delay: (error, retryCount) =>
+      error.status >= 500 || error.status === 0
+        ? timer(1000 * Math.pow(2, retryCount - 1)) // 1s, 2s, 4s
+        : throwError(() => error), // don't retry client errors
+  }),
+);
+```
+
+Learn this form first. The rest of the page explains the `retryWhen` pattern you may still meet in older codebases.
+
 ## Angular Code Snippet
 
 We'll modify the previous `UserService` example to use `retryWhen` for exponential backoff.
@@ -52,15 +79,16 @@ We'll modify the previous `UserService` example to use `retryWhen` for exponenti
 ```typescript
 import { Injectable, inject } from "@angular/core";
 import { HttpClient, HttpErrorResponse } from "@angular/common/http";
-import { Observable, throwError, timer, pipe } from "rxjs";
 import {
+  Observable,
+  throwError,
+  timer,
   retryWhen,
   delayWhen,
   scan,
   tap,
   catchError,
-  mergeMap,
-} from "rxjs/operators";
+} from "rxjs";
 
 export interface UserData {
   id: number;
@@ -159,16 +187,12 @@ import {
   OnInit,
   DestroyRef,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { UserService, UserData } from "./user.service"; // Adjust path if needed
-import { catchError, tap, finalize } from "rxjs/operators";
-import { EMPTY } from "rxjs";
+import { EMPTY, catchError, tap, finalize } from "rxjs";
 
 @Component({
   selector: "app-user-profile-rw", // Changed selector
-  standalone: true,
-  imports: [CommonModule],
   template: `
     <h3>User Profile (retryWhen Example)</h3>
     @if (loading()) {
@@ -245,6 +269,22 @@ export class UserProfileRetryWhenComponent {
     - It calculates the exponential delay: `initialDelay * Math.pow(2, retryCount - 1)`.
     - `timer(delay)` creates an Observable that emits a single value (0) after `delay` milliseconds.
     - `delayWhen` waits for this `timer` to emit before it emits the value it received (the `retryCount`). **This emission is what triggers `retryWhen` to resubscribe to the original `http.get` request.**
+
+## Interview Q&A
+
+??? question "Why was retryWhen deprecated?"
+
+    Two reasons: the notifier pattern made the most common bugs easy (a notifier that never terminates retries forever; forgetting to rethrow swallows errors), and the `retry` configuration object covers the same scenarios, including conditional retries and backoff delays, with declarative options instead of a hand-built meta-stream.
+
+??? question "Inside retryWhen, what exactly triggers a retry and what stops it?"
+
+    Each `next` from the notifier triggers one resubscription of the source. An `error` or `complete` from the notifier ends the whole stream with that notification. That mapping (next = retry, error/complete = stop) is the crux interviewers check for.
+
+## Related
+
+- [retry](retry.md), the modern replacement with `count` and `delay` options
+- [catchError](catchError.md) for the fallback after retries are exhausted
+- [timer](../creation/timer.md), the delay source used in backoff notifiers
 
 ## Summary
 

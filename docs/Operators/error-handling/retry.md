@@ -11,6 +11,13 @@ Imagine you're trying to do something that might fail occasionally due to tempor
 
 It subscribes to the original (source) Observable. If that Observable emits an error, instead of immediately passing the error down the chain, `retry` resubscribes to the source Observable, effectively "trying again".
 
+!!! abstract "At a glance"
+
+    - **Signature:** `retry(count)` or `retry({ count, delay, resetOnSuccess })`
+    - **Use when:** failures are transient (network blips, 5xx responses) and another attempt can genuinely succeed
+    - **Avoid when:** errors are deterministic (400/404 validation errors); retrying cannot help and hammers the server
+    - **Top gotcha:** `retry` **resubscribes the source from scratch**; with HTTP that is a brand-new request, and any side effects run again
+
 ## Key Points
 
 1.  **Error Triggered:** It only activates when the source Observable sends an error notification.
@@ -19,6 +26,27 @@ It subscribes to the original (source) Observable. If that Observable emits an e
 4.  **Success:** If any attempt (initial or retry) is successful, the success value is passed through, and `retry` does nothing further for that subscription.
 5.  **Final Error:** If all attempts (initial + all retries) fail, the error from the _last_ attempt is sent down the Observable chain.
 6.  **Infinite Retries:** Using `retry()` without a count will retry indefinitely upon error. This is usually dangerous!
+
+## Minimal Example
+
+```typescript
+import { defer, of, retry } from "rxjs";
+
+let attempt = 0;
+const flaky$ = defer(() => {
+  attempt++;
+  console.log(`attempt ${attempt}`);
+  if (attempt < 3) throw new Error("transient failure");
+  return of("success");
+});
+
+flaky$.pipe(retry(2)).subscribe(console.log);
+
+// attempt 1
+// attempt 2
+// attempt 3
+// success   (1 initial attempt + up to 2 retries)
+```
 
 ## Real-World Example
 
@@ -38,8 +66,7 @@ Let's create a service that fetches user data and a component that uses it, inco
 ```typescript
 import { Injectable, inject } from "@angular/core";
 import { HttpClient, HttpErrorResponse } from "@angular/common/http";
-import { Observable, throwError, timer } from "rxjs";
-import { retry, catchError, tap } from "rxjs/operators";
+import { Observable, throwError, timer, retry, catchError, tap } from "rxjs";
 
 export interface UserData {
   id: number;
@@ -108,16 +135,12 @@ import {
   OnInit,
   DestroyRef,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { UserService, UserData } from "./user.service";
-import { catchError, tap, finalize } from "rxjs/operators";
-import { EMPTY } from "rxjs"; // Import EMPTY
+import { EMPTY, catchError, tap, finalize } from "rxjs";
 
 @Component({
   selector: "app-user-profile",
-  standalone: true,
-  imports: [CommonModule],
   template: `
     <h3>User Profile</h3>
     @if (loading()) {
@@ -198,7 +221,35 @@ export class UserProfileComponent {
     - `takeUntilDestroyed(this.destroyRef)` ensures the subscription is cleaned up.
     - `catchError`: Catches the _final_ error passed down from the service (after retries) and updates the `errorMsg` signal. Returning `EMPTY` prevents the error from propagating further and allows `finalize` to run.
     - `finalize`: This operator runs regardless of whether the stream completed successfully or errored out (after retries/`catchError`). It's perfect for setting `loading.set(false)`.
-    - `.subscribe()`: Updates the `userProfile` signal when data is successfully received.
+
+## Common Mistakes
+
+**Retrying deterministic failures.** A 404 will be a 404 on attempt three as well. Inspect the error in the `delay` callback and rethrow immediately for client errors, as the service above does.
+
+**Bare `retry()` with no count.** That retries forever: a permanently broken endpoint becomes an infinite request loop. Always bound retries and usually add a delay.
+
+**Placing `retry` after `catchError`.** `catchError` swallows the error first, so `retry` never sees one. The resilient order is `retry(...)` then `catchError(...)`.
+
+## Interview Q&A
+
+??? question "What does retry actually do under the hood?"
+
+    On an error notification it unsubscribes from the failed source and **subscribes again from scratch**. Nothing is replayed or resumed: a cold source (like an HTTP request) starts over completely. After the configured attempts are exhausted, the last error propagates downstream.
+
+??? question "How do you implement exponential backoff with retry?"
+
+    Use the config object's `delay` callback: `retry({ count: 3, delay: (error, retryCount) => timer(1000 * Math.pow(2, retryCount - 1)) })` waits 1s, 2s, 4s. Returning `throwError(() => error)` from the callback aborts retrying for non-transient errors. This replaces the deprecated `retryWhen` pattern.
+
+??? question "Why does retry come before catchError in a resilient HTTP pipeline?"
+
+    Operators see notifications in pipe order. `retry` must observe the raw error to resubscribe; if `catchError` runs first it converts the error into a fallback value and there is nothing left to retry. `http.get(...).pipe(retry(...), catchError(...))` is the canonical order.
+
+## Related
+
+- [catchError](catchError.md) for the fallback once retries are exhausted
+- [retryWhen](retryWhen.md), the deprecated predecessor kept for interview awareness
+- [timer](../creation/timer.md), the usual delay source for backoff strategies
+  - `.subscribe()`: Updates the `userProfile` signal when data is successfully received.
 
 ## Important Considerations for `retry`
 
