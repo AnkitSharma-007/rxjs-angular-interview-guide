@@ -64,7 +64,7 @@ Full mechanics of teardown live in [Subscription & Teardown](../learn/subscripti
 
 **Auditing HTTP calls while ignoring intervals and Subjects.** Effort goes to the streams that complete anyway; the immortal ones slip through. Audit by asking "does this source ever complete?".
 
-**`takeUntil` in the middle of the pipe.** Operators after it (a `switchMap`, a `shareReplay`) can keep inner subscriptions alive past the notifier. The rule: `takeUntil`-style operators go last.
+**`takeUntil` before operators that hold other subscriptions.** A `switchMap` after `takeUntil` keeps its active inner subscription alive past the notifier (completing the outer stream does not cancel the inner one), and a `combineLatest`/`withLatestFrom` keeps its other sources subscribed. Purely pass-through operators like `finalize` are safe after it, but the simple rule that avoids the analysis: `takeUntil`-style operators go last.
 
 **Trusting `takeWhile(() => this.alive)`.** It only checks on emission; a silent stream never re-evaluates the flag and the subscription lingers. Use signal-based completion (`takeUntil`, `takeUntilDestroyed`).
 

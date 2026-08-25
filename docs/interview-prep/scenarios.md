@@ -32,9 +32,14 @@ searchControl.valueChanges.pipe(
 
 ```typescript
 this.submits$.pipe(
-  exhaustMap(() =>
-    this.api.placeOrder(order).pipe(finalize(() => this.submitting.set(false))),
-  ),
+  exhaustMap(() => {
+    // inside the projection: only an accepted click flips the state,
+    // dropped clicks must not touch it
+    this.submitting.set(true);
+    return this.api
+      .placeOrder(order)
+      .pipe(finalize(() => this.submitting.set(false)));
+  }),
 );
 ```
 

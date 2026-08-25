@@ -49,7 +49,7 @@ console.log("after subscribe");
 // value 3
 ```
 
-**`subscribeOn(scheduler)`** delays the moment the chain subscribes to its source. Because there is only one subscription per chain, its position in the pipe does not matter, and using it twice has no additional effect. It is the tool when the **subscription side effect itself** (starting an expensive synchronous producer) should not run right now.
+**`subscribeOn(scheduler)`** delays the moment the chain subscribes to its source. Its position in the pipe does not matter: wherever it sits, it reschedules the one subscription that walks up to the source. Applying it more than once does still stack, though: each application wraps the previous one in another scheduling hop, so delays add up and the outermost scheduler runs first. Use one deliberate `subscribeOn` per chain. It is the tool when the **subscription side effect itself** (starting an expensive synchronous producer) should not run right now.
 
 A memorable framing: `observeOn` moves the **downstream** (consumption), `subscribeOn` moves the **upstream** (production start).
 
@@ -112,7 +112,7 @@ The cases where schedulers earn their keep:
 
 ??? question "observeOn vs subscribeOn?"
 
-    `observeOn` reschedules notification **delivery** and affects only operators downstream of its position. `subscribeOn` reschedules the initial **subscription** to the source, applies once to the whole chain regardless of position, and controls when the producer starts, not when values are delivered.
+    `observeOn` reschedules notification **delivery** and affects only operators downstream of its position. `subscribeOn` reschedules the initial **subscription** to the source, works the same wherever it sits in the pipe, and controls when the producer starts, not when values are delivered. Stick to one `subscribeOn` per chain; stacking several nests scheduling hops.
 
 ??? question "Why do schedulers matter for testing?"
 

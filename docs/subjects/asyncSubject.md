@@ -63,7 +63,7 @@ export class LicenseService {
 }
 ```
 
-In modern code, the same need is usually covered by `shareReplay(1)` on a completing source, or by `firstValueFrom` when a Promise is acceptable. Interviewers still like AsyncSubject as a "do you know the whole family?" question.
+In modern code, the same need is usually covered by `shareReplay(1)` on a **single-emission** source like an HTTP call, or by `firstValueFrom` when a Promise is acceptable. (On a multi-value source they diverge: `shareReplay` forwards every value live and replays the last one, while AsyncSubject stays silent until completion.) Interviewers still like AsyncSubject as a "do you know the whole family?" question.
 
 ## Common Mistakes
 
@@ -71,7 +71,7 @@ In modern code, the same need is usually covered by `shareReplay(1)` on a comple
 
 **Using it for progress or state.** Intermediate `next()` values are unobservable by design. Progress updates want `Subject`/`ReplaySubject`; current state wants `BehaviorSubject` or a signal.
 
-**Reinventing `shareReplay(1)`.** If the source is already an Observable that completes (like an HTTP call), `source$.pipe(shareReplay(1))` provides the same "one result, replayed to everyone" semantics without manual Subject management.
+**Reinventing `shareReplay(1)`.** If the source is an Observable that emits once and completes (like an HTTP call), `source$.pipe(shareReplay(1))` provides the same "one result, replayed to everyone" semantics without manual Subject management. The equivalence only holds for single-emission sources: a multi-value stream through `shareReplay` delivers every value to live subscribers, which AsyncSubject never does.
 
 ## Interview Q&A
 
@@ -85,7 +85,7 @@ In modern code, the same need is usually covered by `shareReplay(1)` on a comple
 
 ??? question "Which non-Subject tools cover AsyncSubject's use case today?"
 
-    `shareReplay(1)` on a completing source for stream consumers, or `lastValueFrom(source$)` when a Promise fits better. AsyncSubject remains relevant mostly for manual, imperative completion control, and for interview completeness.
+    For single-emission sources like HTTP calls, `shareReplay(1)` for stream consumers or `lastValueFrom(source$)` when a Promise fits better. For multi-value sources the match is looser (`shareReplay` forwards intermediate values live; a true only-the-final-value need is `takeLast(1)` territory). AsyncSubject remains relevant mostly for manual, imperative completion control, and for interview completeness.
 
 ## Related
 

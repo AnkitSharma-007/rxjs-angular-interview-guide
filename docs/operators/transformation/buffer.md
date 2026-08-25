@@ -53,7 +53,15 @@ interval(100)
 import { Injectable, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { Subject, bufferTime, filter, concatMap } from "rxjs";
+import {
+  Subject,
+  EMPTY,
+  bufferTime,
+  filter,
+  concatMap,
+  retry,
+  catchError,
+} from "rxjs";
 
 interface TrackedEvent {
   name: string;
@@ -72,8 +80,15 @@ export class AnalyticsService {
         bufferTime(5000, undefined, 20),
         // quiet windows produce empty arrays; skip them
         filter((batch) => batch.length > 0),
-        // send batches in order so the backend sees a consistent timeline
-        concatMap((batch) => this.http.post("/api/analytics", { batch })),
+        // send batches in order so the backend sees a consistent timeline;
+        // a failed batch is retried, then dropped, so one bad request
+        // cannot error the pipeline and kill all future batching
+        concatMap((batch) =>
+          this.http.post("/api/analytics", { batch }).pipe(
+            retry({ count: 2, delay: 1000 }),
+            catchError(() => EMPTY),
+          ),
+        ),
         takeUntilDestroyed(),
       )
       .subscribe();
@@ -85,7 +100,7 @@ export class AnalyticsService {
 }
 ```
 
-**How it works:** individual `track()` calls would mean one HTTP request per click. `bufferTime(5000, undefined, 20)` groups them into at most one request per 5 seconds, releasing early if a burst fills 20 events. The `filter` is essential: without it, every quiet 5-second window would post an empty batch.
+**How it works:** individual `track()` calls would mean one HTTP request per click. `bufferTime(5000, undefined, 20)` groups them into at most one request per 5 seconds, releasing early if a burst fills 20 events. The `filter` is essential: without it, every quiet 5-second window would post an empty batch. The error handling inside `concatMap` matters just as much: without it, one failed POST would error the whole subscription and silently stop analytics for the rest of the session.
 
 ## Common Mistakes
 

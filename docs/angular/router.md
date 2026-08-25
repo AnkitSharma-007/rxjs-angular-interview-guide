@@ -97,7 +97,7 @@ export class LoadingBarComponent {
 
 ## One Lifecycle Nuance Worth Knowing
 
-- **`ActivatedRoute` streams** (`paramMap`, `data`, ...) are scoped to the route: Angular completes them when the route is destroyed, so they rarely leak by themselves. (Chained work like the HTTP call above still benefits from `toSignal`/`takeUntilDestroyed` cleanup.)
+- **`ActivatedRoute` streams** (`paramMap`, `data`, ...) are scoped to the route instance: when the route is destroyed, the route and its component become unreachable together, so these subscriptions rarely leak by themselves. Note the precise mechanics: Angular does **not** send a `complete` notification, so never hang cleanup logic on a `complete` handler or `finalize` here. (Chained work like the HTTP call above still benefits from `toSignal`/`takeUntilDestroyed` cleanup.)
 - **`Router.events`** belongs to the app-lived `Router` service and **never completes**. Subscriptions to it from components absolutely need [teardown](memory-leaks.md).
 
 ## Common Mistakes

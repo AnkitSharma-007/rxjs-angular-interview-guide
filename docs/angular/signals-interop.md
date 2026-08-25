@@ -71,7 +71,13 @@ Use it when signal-shaped state must drive stream-shaped work, the classic case 
 import { Component, inject, input } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { toObservable, toSignal } from "@angular/core/rxjs-interop";
-import { debounceTime, distinctUntilChanged, switchMap } from "rxjs";
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  of,
+  switchMap,
+} from "rxjs";
 
 @Component({
   selector: "app-results",
@@ -94,7 +100,10 @@ export class ResultsComponent {
       debounceTime(300),
       distinctUntilChanged(),
       switchMap((q) =>
-        this.http.get<string[]>("/api/search", { params: { q } }),
+        this.http.get<string[]>("/api/search", { params: { q } }).pipe(
+          // catch inside switchMap: an error must not kill the query stream
+          catchError(() => of<string[]>([])),
+        ),
       ),
     ),
     { initialValue: [] },
