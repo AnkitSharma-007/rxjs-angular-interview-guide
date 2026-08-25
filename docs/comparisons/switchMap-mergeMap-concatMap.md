@@ -70,3 +70,21 @@ For a save button, `exhaustMap` is almost always the intended behavior, paired w
 - Only the **first** trigger matters until it finishes (submit, login): [`exhaustMap`](../operators/transformation/exhaustMap.md)
 
 One closing fact that ties the family together: `concatMap(project)` is just `mergeMap(project, 1)`, and all four share the same signature, so swapping strategies is a one-word change.
+
+## Interview Q&A
+
+??? question "Walk me through choosing between the four for a typeahead search."
+
+    The requirement is "only the latest term's results matter". A new keystroke makes the in-flight request worthless, so it should be cancelled: that is `switchMap`. `mergeMap` would let stale responses overwrite fresh ones, `concatMap` would queue every keystroke's request, and `exhaustMap` would ignore new terms while an old request runs, which is exactly backwards for search.
+
+??? question "When is switchMap the wrong choice for HTTP?"
+
+    For writes. Cancelling a POST request does not cancel the server-side work; the mutation may still land while your client has thrown away the response. For saves you want `exhaustMap` (ignore repeat triggers) or `concatMap` (queue them in order), so every response you act on corresponds to a request you know about.
+
+??? question "What does mergeMap's concurrency argument do?"
+
+    `mergeMap(project, n)` caps the number of inner Observables running at once; further source values wait in a queue. It is the middle ground between full parallelism (`mergeMap` default, infinite) and strict sequence (`concatMap`, which is literally `mergeMap(project, 1)`). A typical use is limiting fan-out, for example uploading files three at a time.
+
+??? question "A save button fires duplicate requests in production. Diagnose it."
+
+    Almost always a flattening-strategy bug: clicks mapped with `mergeMap` (every click fires) or `switchMap` (requests cancelled client-side but mutations still land server-side). The fix is `exhaustMap`, which ignores clicks while a save is in flight, plus disabling the button for user feedback. If duplicates persist, look for multiple subscriptions to the same click stream.
