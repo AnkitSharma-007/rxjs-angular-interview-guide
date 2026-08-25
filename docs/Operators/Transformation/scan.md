@@ -113,6 +113,7 @@ This is precisely the mental model behind NgRx and friends; being able to sketch
 
 ## Related
 
+- [reduce](reduce.md), the same fold emitting only the final value at completion
 - [map](map.md) for stateless per-value transformation
 - [BehaviorSubject](../../subjects/behaviorSubject.md), the imperative sibling for holding current state
 - [startWith](../combination/startWith.md) for seeding downstream consumers immediately

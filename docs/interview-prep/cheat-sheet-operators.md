@@ -60,13 +60,13 @@ Triple-click Save: `mergeMap` 3 racing requests · `concatMap` 3 sequential · `
 
 ## Timing Operators
 
-| Operator          | Behavior                                   | Fits                      |
-| ----------------- | ------------------------------------------ | ------------------------- |
-| `debounceTime(t)` | Last value after t of silence              | Typing                    |
-| `throttleTime(t)` | Value, then cooldown t                     | Scroll, clicks            |
-| `auditTime(t)`    | On activity, wait t, emit latest           | Steady sampling of bursts |
-| `sampleTime(t)`   | Every t, emit latest if any                | Fixed-clock readouts      |
-| `delay(t)`        | Shift each value by t (errors NOT delayed) | Minimum display time      |
+| Operator                                                    | Behavior                                   | Fits                      |
+| ----------------------------------------------------------- | ------------------------------------------ | ------------------------- |
+| [`debounceTime(t)`](../operators/filtering/debounceTime.md) | Last value after t of silence              | Typing                    |
+| [`throttleTime(t)`](../operators/filtering/throttleTime.md) | Value, then cooldown t                     | Scroll, clicks            |
+| [`auditTime(t)`](../operators/filtering/auditTime.md)       | On activity, wait t, emit latest           | Steady sampling of bursts |
+| [`sampleTime(t)`](../operators/filtering/sampleTime.md)     | Every t, emit latest if any                | Fixed-clock readouts      |
+| [`delay(t)`](../operators/utility/delay.md)                 | Shift each value by t (errors NOT delayed) | Minimum display time      |
 
 ## Unsubscribe Strategies
 

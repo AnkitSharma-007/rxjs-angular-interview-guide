@@ -21,6 +21,7 @@ nav:
       - "Hot Observables": learn/hot-observables.md
       - "Unicast vs Multicast": learn/unicast-vs-multicast.md
       - "Promise vs Observable": learn/promise-vs-observable.md
+      - "Schedulers, observeOn & subscribeOn": learn/schedulers.md
   - Operators:
       - operators/index.md
       - "Creation":
@@ -34,14 +35,19 @@ nav:
       - "Transformation":
           - "map": operators/transformation/map.md
           - "scan": operators/transformation/scan.md
+          - "reduce": operators/transformation/reduce.md
           - "switchMap": operators/transformation/switchMap.md
           - "mergeMap": operators/transformation/mergeMap.md
           - "concatMap": operators/transformation/concatMap.md
           - "exhaustMap": operators/transformation/exhaustMap.md
+          - "pairwise": operators/transformation/pairwise.md
+          - "buffer family": operators/transformation/buffer.md
       - "Filtering":
           - "filter": operators/filtering/filter.md
           - "debounceTime": operators/filtering/debounceTime.md
           - "throttleTime": operators/filtering/throttleTime.md
+          - "auditTime": operators/filtering/auditTime.md
+          - "sampleTime": operators/filtering/sampleTime.md
           - "distinctUntilChanged": operators/filtering/distinctUntilChanged.md
           - "take": operators/filtering/take.md
           - "takeUntil": operators/filtering/takeUntil.md
@@ -57,6 +63,7 @@ nav:
           - "withLatestFrom": operators/combination/withLatestFrom.md
           - "merge": operators/combination/merge.md
           - "concat": operators/combination/concat.md
+          - "race": operators/combination/race.md
           - "startWith": operators/combination/startWith.md
       - "Error Handling":
           - "catchError": operators/error-handling/catchError.md
@@ -101,6 +108,7 @@ nav:
       - "Common Traps": interview-prep/common-traps.md
       - "Operator Cheat Sheet": interview-prep/cheat-sheet-operators.md
       - "60-Minute Revision": interview-prep/sixty-minute-revision.md
+  - Tags: tags.md
 
 # Configuration
 theme:

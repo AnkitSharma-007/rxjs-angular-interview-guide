@@ -90,5 +90,6 @@ export class ScrollIndicatorComponent {
 ## Related
 
 - [debounceTime](debounceTime.md), the wait-for-silence counterpart
+- [auditTime](auditTime.md) for trailing-edge windows and [sampleTime](sampleTime.md) for a fixed clock
 - [fromEvent](../creation/fromEvent.md), the usual source of streams worth throttling
 - [distinctUntilChanged](distinctUntilChanged.md) to drop repeats after sampling

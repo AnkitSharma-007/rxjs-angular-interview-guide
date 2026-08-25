@@ -32,10 +32,12 @@ Think of operators as tools in a workshop for working with your asynchronous dat
 
       - [`map`](transformation/map.md): Applies a function to each emitted value.
       - [`scan`](transformation/scan.md): Accumulates values over time, like `Array.reduce`, emitting each intermediate result.
+      - [`reduce`](transformation/reduce.md): Accumulates values like `scan`, but emits only the final result when the source completes.
       - [`mergeMap`](transformation/mergeMap.md): Projects each source value to an Observable and merges their emissions into a single stream. Good for handling multiple inner observables concurrently.
       - [`switchMap`](transformation/switchMap.md): Projects each source value to an Observable, but cancels the previous inner Observable when a new source value arrives. Ideal for scenarios like type-ahead searches where you only care about the latest request.
       - [`concatMap`](transformation/concatMap.md): Projects each source value to an Observable, but waits for the previous inner Observable to    complete before subscribing to the next one. Ensures order.
-      - `bufferTime(1000)`: Collects emitted values into arrays over a specified time period.
+      - [`pairwise`](transformation/pairwise.md): Emits the previous and current value together as a pair.
+      - [`bufferTime`](transformation/buffer.md): Collects emitted values into arrays and releases them in timed batches (see also `buffer` and `bufferCount`).
       - `groupBy(item => item.category)`: Groups items emitted by the source Observable based on a key.
 
 ## Filtering Operators
@@ -51,6 +53,8 @@ Think of operators as tools in a workshop for working with your asynchronous dat
       - [`skip`](filtering/skip.md): Skips the first N values.
       - [`debounceTime`](filtering/debounceTime.md): Emits a value only after a specified time has passed without another source emission. Useful for rate-limiting     input events (like search inputs).
       - [`throttleTime`](filtering/throttleTime.md): Emits a value, then ignores emissions during a cooldown window. Useful for steady-rate handling of scroll or mousemove events.
+      - [`auditTime`](filtering/auditTime.md): On source activity, waits a duration, then emits the latest value. Trailing-edge rate limiting.
+      - [`sampleTime`](filtering/sampleTime.md): On a fixed clock, emits the newest value since the last tick, if any.
       - [`takeWhile`](filtering/takeWhile.md): Emits values while a predicate holds, then completes.
       - [`distinctUntilChanged`](filtering/distinctUntilChanged.md): Emits only when the current value is different from the previous one.
 
@@ -65,7 +69,7 @@ Think of operators as tools in a workshop for working with your asynchronous dat
       - [`merge`](combination/merge.md): Subscribes to all source Observables and simply passes through any value emitted by _any_ of them as soon as     it arrives. Order depends on timing.
       - [`concat`](combination/concat.md): Subscribes to the first Observable, emits all its values, and _only then_ subscribes to the second    Observable, emits its values, and so on. Preserves order strictly.
       - [`startWith`](combination/startWith.md): Prepends an initial value that subscribers receive synchronously before the source emits.
-      - `race(obs1$, obs2$)`: Mirrors the first Observable (either `obs1$` or `obs2$`) to emit a value. Ignores the other(s).
+      - [`race`](combination/race.md): Mirrors whichever source Observable produces a notification first and unsubscribes the rest.
 
 ## Error Handling Operators
 
