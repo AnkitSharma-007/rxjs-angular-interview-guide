@@ -17,10 +17,11 @@ Think of operators as tools in a workshop for working with your asynchronous dat
 
       - [`of`](creation/of.md): Creates an Observable that emits the provided values sequentially and then completes.
       - [`from`](creation/from.md): Converts arrays, promises, iterables, or strings into Observables.
-      - `fromEvent`: Creates an Observable from DOM events. (Hot Observable)
+      - [`fromEvent`](creation/fromEvent.md): Creates an Observable from DOM events. (Hot Observable)
+      - [`defer`](creation/defer.md): Creates the actual Observable lazily, per subscriber, at subscription time.
       - [`interval`](creation/interval.md): Emits sequential numbers every specified interval (in milliseconds).
       - [`timer`](creation/timer.md): Emits one value after an initial delay, then optionally emits subsequent values at a regular interval.
-      - `throwError(() => new Error('Oops!'))`: Creates an Observable that immediately emits an error.
+      - [`throwError`](error-handling/throwError.md): Creates an Observable that immediately emits an error.
       - [`EMPTY`](creation/empty-never.md): Creates an Observable that emits no items and immediately completes.
       - [`NEVER`](creation/empty-never.md): Creates an Observable that never emits any items and never completes.
 
@@ -30,7 +31,7 @@ Think of operators as tools in a workshop for working with your asynchronous dat
 - **Examples:**
 
       - [`map`](transformation/map.md): Applies a function to each emitted value.
-      - `scan((acc, value) => acc + value, 0)`: Accumulates values over time, like `Array.reduce`.
+      - [`scan`](transformation/scan.md): Accumulates values over time, like `Array.reduce`, emitting each intermediate result.
       - [`mergeMap`](transformation/mergeMap.md): Projects each source value to an Observable and merges their emissions into a single stream. Good for handling multiple inner observables concurrently.
       - [`switchMap`](transformation/switchMap.md): Projects each source value to an Observable, but cancels the previous inner Observable when a new source value arrives. Ideal for scenarios like type-ahead searches where you only care about the latest request.
       - [`concatMap`](transformation/concatMap.md): Projects each source value to an Observable, but waits for the previous inner Observable to    complete before subscribing to the next one. Ensures order.
@@ -49,6 +50,8 @@ Think of operators as tools in a workshop for working with your asynchronous dat
       - [`takeUntil`](filtering/takeUntil.md): Emits values until a second `notifier$` Observable emits. Very useful for unsubscribing/completing streams    (e.g., when a component is destroyed).
       - [`skip`](filtering/skip.md): Skips the first N values.
       - [`debounceTime`](filtering/debounceTime.md): Emits a value only after a specified time has passed without another source emission. Useful for rate-limiting     input events (like search inputs).
+      - [`throttleTime`](filtering/throttleTime.md): Emits a value, then ignores emissions during a cooldown window. Useful for steady-rate handling of scroll or mousemove events.
+      - [`takeWhile`](filtering/takeWhile.md): Emits values while a predicate holds, then completes.
       - [`distinctUntilChanged`](filtering/distinctUntilChanged.md): Emits only when the current value is different from the previous one.
 
 ## Combination Operators
@@ -59,8 +62,9 @@ Think of operators as tools in a workshop for working with your asynchronous dat
       - [`combineLatest`](combination/combineLatest.md): When _any_ source Observable emits, it combines the _latest_ values from _all_ sources and emits     the combined result (usually as an array). Requires all sources to have emitted at least once.
       - [`zip`](combination/zip.md): Combines values from source Observables pairwise. Waits for each source to emit a value at the corresponding     index before emitting the combined pair.
       - [`forkJoin`](combination/forkJoin.md): Waits for _all_ source Observables to _complete_ and then emits an array containing the _last_ value    emitted by each source. Good for running parallel asynchronous operations and getting all results at the end.
-      - `merge(obs1$, obs2$)`: Subscribes to all source Observables and simply passes through any value emitted by _any_ of them as soon as     it arrives. Order depends on timing.
-      - `concat(obs1$, obs2$)`: Subscribes to the first Observable, emits all its values, and _only then_ subscribes to the second    Observable, emits its values, and so on. Preserves order strictly.
+      - [`merge`](combination/merge.md): Subscribes to all source Observables and simply passes through any value emitted by _any_ of them as soon as     it arrives. Order depends on timing.
+      - [`concat`](combination/concat.md): Subscribes to the first Observable, emits all its values, and _only then_ subscribes to the second    Observable, emits its values, and so on. Preserves order strictly.
+      - [`startWith`](combination/startWith.md): Prepends an initial value that subscribers receive synchronously before the source emits.
       - `race(obs1$, obs2$)`: Mirrors the first Observable (either `obs1$` or `obs2$`) to emit a value. Ignores the other(s).
 
 ## Error Handling Operators

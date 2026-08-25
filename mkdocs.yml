@@ -23,11 +23,14 @@ nav:
       - "Creation":
           - "of": operators/creation/of.md
           - "from": operators/creation/from.md
+          - "fromEvent": operators/creation/fromEvent.md
+          - "defer": operators/creation/defer.md
           - "interval": operators/creation/interval.md
           - "timer": operators/creation/timer.md
           - "EMPTY vs NEVER": operators/creation/empty-never.md
       - "Transformation":
           - "map": operators/transformation/map.md
+          - "scan": operators/transformation/scan.md
           - "switchMap": operators/transformation/switchMap.md
           - "mergeMap": operators/transformation/mergeMap.md
           - "concatMap": operators/transformation/concatMap.md
@@ -35,9 +38,11 @@ nav:
       - "Filtering":
           - "filter": operators/filtering/filter.md
           - "debounceTime": operators/filtering/debounceTime.md
+          - "throttleTime": operators/filtering/throttleTime.md
           - "distinctUntilChanged": operators/filtering/distinctUntilChanged.md
           - "take": operators/filtering/take.md
           - "takeUntil": operators/filtering/takeUntil.md
+          - "takeWhile": operators/filtering/takeWhile.md
           - "first": operators/filtering/first.md
           - "last": operators/filtering/last.md
           - "skip": operators/filtering/skip.md
@@ -47,10 +52,14 @@ nav:
           - "forkJoin": operators/combination/forkJoin.md
           - "zip": operators/combination/zip.md
           - "withLatestFrom": operators/combination/withLatestFrom.md
+          - "merge": operators/combination/merge.md
+          - "concat": operators/combination/concat.md
+          - "startWith": operators/combination/startWith.md
       - "Error Handling":
           - "catchError": operators/error-handling/catchError.md
           - "retry": operators/error-handling/retry.md
           - "retryWhen": operators/error-handling/retryWhen.md
+          - "throwError": operators/error-handling/throwError.md
       - "Utility":
           - "tap": operators/utility/tap.md
           - "delay": operators/utility/delay.md
