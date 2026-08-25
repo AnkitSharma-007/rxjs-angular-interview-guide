@@ -13,10 +13,12 @@ RxJS is woven into Angular: `HttpClient` returns Observables, reactive forms exp
 - **[Async Pipe](async-pipe.md)**: let the template subscribe and unsubscribe for you, and avoid the most common source of memory leaks.
 - **[Signals & RxJS Interop](signals-interop.md)**: `toSignal`, `toObservable`, and deciding when signals replace RxJS.
 - **[HttpClient Patterns](http-patterns.md)**: loading/error/success state, sequential and parallel requests, cancellation, and resilient pipelines.
+- **[Reactive Forms](reactive-forms.md)**: `valueChanges` pipelines for debounced search, autosave, and dependent fields.
+- **[Router](router.md)**: `paramMap` + `switchMap`, router events, and the component-reuse gotcha.
+- **[Interceptors & Retries](interceptors-retry.md)**: functional interceptors, retry strategies, and the three-layer error model.
+- **[Caching](caching.md)**: `shareReplay` caches, refresh triggers, per-key maps, TTL, and stale-while-revalidate.
 - **[Memory Leaks & Subscription Cleanup](memory-leaks.md)**: where leaks actually come from, how to find them, and the prevention toolbox.
 - **[RxJS Anti-Patterns](anti-patterns.md)**: the habits that fail code reviews, each with its fix.
-
-More guides are planned: reactive forms, router streams, interceptors and retry strategies, and caching. Track progress in the [project repository](https://github.com/AnkitSharma-007/rxjs-angular-interview-guide).
 
 ## RxJS everywhere else
 

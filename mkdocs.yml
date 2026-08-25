@@ -81,6 +81,10 @@ nav:
       - "Async Pipe": angular/async-pipe.md
       - "Signals & RxJS Interop": angular/signals-interop.md
       - "HttpClient Patterns": angular/http-patterns.md
+      - "Reactive Forms": angular/reactive-forms.md
+      - "Router": angular/router.md
+      - "Interceptors & Retries": angular/interceptors-retry.md
+      - "Caching": angular/caching.md
       - "Memory Leaks": angular/memory-leaks.md
       - "RxJS Anti-Patterns": angular/anti-patterns.md
   - Comparisons:
