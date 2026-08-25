@@ -19,6 +19,13 @@ Think of it like a **whiteboard or a notice board:**
 
 Like a regular `Subject`, it still multicasts – pushing values to all current subscribers when `next()` is called.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `new BehaviorSubject<T>(initialValue)`; also has a synchronous `getValue()`
+    - **Use when:** modeling state that always has a current value: auth status, selected theme, active filters
+    - **Avoid when:** there is no sensible initial value, or subscribers need more than one past value (use `ReplaySubject`)
+    - **Top gotcha:** every new subscriber immediately receives the current value; code that expects to "wait for the next event" will fire instantly
+
 ## Why Use a `BehaviorSubject`?
 
 `BehaviorSubject` is excellent for managing **state** because application state usually _always has a current value_.
@@ -30,6 +37,22 @@ Like a regular `Subject`, it still multicasts – pushing values to all current 
     - Configuration settings.
 2.  **Providing Initial Data:** Components often need to know the _current_ state as soon as they initialize to render correctly. `BehaviorSubject` guarantees they get a value immediately upon subscription.
 3.  **Synchronous Access (Use Sparingly):** `BehaviorSubject` has a `getValue()` method that allows you to synchronously get its current value _without_ subscribing. While useful occasionally, relying heavily on this can be an anti-pattern compared to reactive subscriptions. Signals often provide a better way to get current values reactively.
+
+## Minimal Example
+
+```typescript
+import { BehaviorSubject } from "rxjs";
+
+const theme = new BehaviorSubject<"light" | "dark">("light");
+
+theme.subscribe((v) => console.log(`A: ${v}`)); // A: light  (current value, immediately)
+
+theme.next("dark"); // A: dark
+
+theme.subscribe((v) => console.log(`B: ${v}`)); // B: dark   (late subscriber still gets current value)
+
+console.log(theme.getValue()); // dark (synchronous read)
+```
 
 ## Real-World Example: Application Theme Service
 
@@ -85,7 +108,6 @@ import { ThemeService, AppTheme } from "./theme.service"; // Adjust path
 
 @Component({
   selector: "app-theme-switcher",
-  standalone: true,
   template: `
     <div>
       <label>Select Theme: </label>
@@ -135,7 +157,6 @@ import { ThemeService, AppTheme } from "./theme.service"; // Adjust path
 
 @Component({
   selector: "app-themed-content",
-  standalone: true,
   template: `
     <div class="content">
       <h3>Themed Content</h3>
@@ -210,7 +231,6 @@ import { ThemedContentComponent } from "./themed-content.component"; // Adjust p
 
 @Component({
   selector: "app-root",
-  standalone: true,
   imports: [ThemeSwitcherComponent, ThemedContentComponent], // Import components
   template: `
     <h1>RxJS BehaviorSubject Demo</h1>
@@ -232,3 +252,31 @@ export class AppComponent {}
 7.  `ThemedContentComponent`'s subscription receives the new theme, updates its signal (`currentThemeSignal`), and its appearance changes accordingly.
 
 Compare this to a regular `Subject`: If we used a plain `Subject` without an initial value, `ThemedContentComponent` wouldn't know the theme when it first loaded. It would only react _after_ the user first clicked a button in the `ThemeSwitcherComponent`. `BehaviorSubject` solves this by providing that essential current state immediately.
+
+## Common Mistakes
+
+**Overusing `getValue()`.** Sprinkling synchronous reads through the codebase turns reactive state back into imperative state and hides ordering bugs. Prefer subscribing (or `toSignal`) and let values flow; reserve `getValue()` for rare boundary cases.
+
+**Choosing a misleading initial value.** `new BehaviorSubject<User>(null!)` forces every subscriber to handle a fake null state. If "no value yet" is real, model it honestly (`User | null`) or use a `ReplaySubject(1)`, which has no initial value but replays the first real one.
+
+**Using it as a public read-write bag.** Same rule as `Subject`: keep it private, expose `asObservable()`, and mutate only through service methods so state changes stay traceable.
+
+## Interview Q&A
+
+??? question "When do you pick BehaviorSubject over Subject?"
+
+    When the stream models **state** rather than events: state always has a current value, and any component subscribing later still needs it. Events (clicks, notifications) fit a plain `Subject`, where replaying the last event would be wrong.
+
+??? question "What is the difference between BehaviorSubject(1) semantics and ReplaySubject(1)?"
+
+    Both replay one value to new subscribers. `BehaviorSubject` requires an initial value and exposes `getValue()`. `ReplaySubject(1)` starts empty (no emission until the first `next`) and, importantly, still replays its last value to new subscribers **after completion**, while a completed `BehaviorSubject` only emits complete.
+
+??? question "How does BehaviorSubject relate to Angular signals?"
+
+    Both hold a current value and notify consumers of changes. A writable `signal()` covers most local-state cases with less ceremony, and `toSignal()`/`toObservable()` bridge the two worlds. BehaviorSubject remains useful when you need RxJS operators, multicast semantics, or interop with stream-based APIs.
+
+## Related
+
+- [Subject](subject.md) for plain event multicasting without a current value
+- [ReplaySubject](replaySubject.md) to replay more than one value, or one value without an initial default
+- [Subject vs BehaviorSubject vs ReplaySubject](../comparisons/subject-behaviorSubject-replaySubject.md) for the full comparison

@@ -14,6 +14,13 @@ Imagine you have an Observable that does some expensive work when someone subscr
 2.  **Multicasting Results:** It takes the values emitted by that single source subscription and broadcasts them to all downstream subscribers.
 3.  **Replaying Buffered Values:** It keeps a buffer of the most recent values (you specify how many) and immediately sends those buffered values to any _new_ subscriber that joins later.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `shareReplay({ bufferSize, refCount })` (or `shareReplay(bufferSize)`, which sets `refCount: false`)
+    - **Use when:** many consumers need the same result and late subscribers should get the cached value: config, user profile, lookup data
+    - **Avoid when:** values must not be replayed (live-only events) or the cache must be refreshable without extra plumbing
+    - **Top gotcha:** the bare `shareReplay(1)` form never disconnects from a non-completing source, a classic memory leak
+
 ## Analogy
 
 Think of watching a **live stream on the internet that also has DVR/replay capabilities**.
@@ -35,6 +42,26 @@ Think of watching a **live stream on the internet that also has DVR/replay capab
 - `refCount`: (Reference Counting) This is crucial!
   - `refCount: true`: The operator keeps track of how many active subscribers there are. It subscribes to the source Observable only when the _first_ subscriber arrives. It **unsubscribes** from the source Observable when the _last_ subscriber unsubscribes. This is usually what you want for things like HTTP requests to avoid keeping connections or resources active unnecessarily. If a new subscriber arrives later, it will re-subscribe to the source.
   - `refCount: false`: The subscription to the source Observable, once established by the first subscriber, **stays active forever** (or until the source completes/errors), even if all subscribers leave. Use this only if you intend for the source to keep running in the background regardless of subscribers.
+
+!!! note "Completion changes the rules"
+
+    `refCount` only matters while the source is still **live**. Once the source completes (like a finished HTTP request), the buffered value is replayed to every future subscriber without resubscribing, regardless of `refCount`. After an **error**, `shareReplay` resets instead, so the next subscriber retriggers the source.
+
+## Minimal Example
+
+```typescript
+import { defer, of, shareReplay } from "rxjs";
+
+let calls = 0;
+const data$ = defer(() => {
+  calls++;
+  console.log(`source executed: ${calls}`);
+  return of("result");
+}).pipe(shareReplay({ bufferSize: 1, refCount: true }));
+
+data$.subscribe((v) => console.log(`A: ${v}`)); // source executed: 1, A: result
+data$.subscribe((v) => console.log(`B: ${v}`)); // B: result (replayed, source NOT re-executed)
+```
 
 ## Real-World Example: Efficiently Fetching Shared Configuration Data
 
@@ -109,14 +136,11 @@ import {
   DestroyRef,
   ChangeDetectionStrategy,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { ConfigService, AppConfig } from "./config.service"; // Adjust path
 
 @Component({
   selector: "app-comp-a",
-  standalone: true,
-  imports: [CommonModule],
   template: `
     <div class="component-box">
       <h4>Component A</h4>
@@ -162,14 +186,11 @@ import {
   DestroyRef,
   ChangeDetectionStrategy,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { ConfigService, AppConfig } from "./config.service"; // Adjust path
 
 @Component({
   selector: "app-comp-b",
-  standalone: true,
-  imports: [CommonModule],
   template: `
     <div class="component-box" style="border-color: green;">
       <h4>Component B</h4>
@@ -221,7 +242,6 @@ import { CompBComponent } from "./comp-b.component"; // Adjust path
 
 @Component({
   selector: "app-root",
-  standalone: true,
   imports: [CompAComponent, CompBComponent], // Import components
   template: `
     <h1>RxJS shareReplay Demo</h1>
@@ -241,7 +261,35 @@ export class AppComponent {}
 5.  A moment later, `CompBComponent` initializes and subscribes to the _same_ `configService.config$`.
 6.  Because `shareReplay` already has an active source subscription and a buffered value, it **does not** trigger a new HTTP request. Instead, it _immediately_ replays the buffered `AppConfig` value to `CompBComponent`. You will _not_ see the "Fetching..." log message a second time.
 7.  Both components now have the same configuration data, fetched with only a single API call.
-8.  If both `CompA` and `CompB` were destroyed (causing their subscriptions via `takeUntilDestroyed` to end), `shareReplay` (because `refCount: true`) would notice the subscriber count dropped to zero and would unsubscribe from the source `http.get` Observable. If a new component subscribed later, the fetch process would start again.
+8.  If both `CompA` and `CompB` were destroyed **while the request was still in flight**, `shareReplay` (because `refCount: true`) would unsubscribe from the source and abort the HTTP call; a later subscriber would trigger a fresh fetch. But once the source has **completed**, the cached value is replayed to any future subscriber without a new request, regardless of `refCount`. Refreshing the config requires rebuilding the stream (see Common Mistakes).
+
+## Common Mistakes
+
+**Using the bare `shareReplay(1)` on a non-completing source.** That form means `refCount: false`: the operator stays subscribed to the source forever, even with zero subscribers. On sources like intervals, Subjects, or WebSocket streams this leaks work and memory. Pass `{ bufferSize: 1, refCount: true }` unless you deliberately want a permanent connection.
+
+**Assuming `refCount: true` re-fetches after completion.** It does not: a completed source is cached permanently for the lifetime of the stream. To support refresh, rebuild the pipeline behind a trigger, for example `refresh$.pipe(startWith(void 0), switchMap(() => this.http.get(...)), shareReplay(...))`.
+
+**Ignoring error behavior.** Errors are not cached: `shareReplay` resets after an error, so each new subscriber re-triggers the failing request. Without `retry`/`catchError` upstream, a broken endpoint gets hammered once per subscriber.
+
+## Interview Q&A
+
+??? question "What exactly does refCount control in shareReplay?"
+
+    Whether the operator unsubscribes from a **live** source when its own subscriber count reaches zero. `refCount: true` disconnects (and a later subscriber resubscribes the source); `refCount: false` keeps the source running forever. After the source completes, `refCount` is irrelevant: the buffer is replayed to all future subscribers without resubscription.
+
+??? question "How would you cache an HTTP response so multiple components share one request?"
+
+    Put the request in a service field piped through `shareReplay({ bufferSize: 1, refCount: true })` and let every consumer subscribe to that one Observable. The first subscriber fires the request; later subscribers replay the cached response. Mention the refresh limitation and the trigger + `switchMap` pattern for invalidation to stand out.
+
+??? question "Why is shareReplay a common source of memory leaks?"
+
+    Two reasons: the default `refCount: false` keeps the source subscription alive forever on non-completing sources, and the replay buffer itself holds references to emitted objects. Both are invisible until memory profiling, which is why interviewers ask about the configuration object.
+
+## Related
+
+- [share](share.md) for live multicasting without a cache
+- [ReplaySubject](replaySubject.md), the primitive that powers the replay buffer
+- [Cold Observables](../learn/cold-observables.md) for why each HttpClient subscription normally re-executes
 
 ## Summary
 

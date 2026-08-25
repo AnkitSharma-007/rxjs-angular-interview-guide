@@ -13,6 +13,13 @@ Think of a `Subject` as a special kind of Observable that acts like **both** an 
 
 The **key characteristic** of a Subject is **multicasting**. This means that when the Subject emits a value (because `next()` was called on it), it pushes that value to _all_ of its current subscribers simultaneously. This is different from plain ("cold") Observables (like those from `HttpClient` or `interval`), which typically start a _new_, independent execution for _each_ subscriber.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `new Subject<T>()`; call `next(value)`, `error(err)`, `complete()` on it, or `subscribe` to it
+    - **Use when:** bridging imperative events into streams, or building a service event bus
+    - **Avoid when:** new subscribers need the current value immediately (use `BehaviorSubject`) or recent history (use `ReplaySubject`)
+    - **Top gotcha:** late subscribers miss everything emitted before they subscribed; a plain Subject has no memory
+
 ## Analogy
 
 Imagine a **live radio broadcast**.
@@ -28,6 +35,25 @@ When the announcer speaks into the microphone (`next()`), the tower (`Subject`) 
 1.  **Event Bus:** To create a simple way for different parts of your application (like unrelated components) to communicate through a shared service. One part calls `next()` on the Subject, and other parts listening to that Subject react.
 2.  **Bridging:** To take values or events from non-Observable sources (like imperative button clicks, WebSocket messages, etc.) and push them into an Observable stream for further processing with RxJS operators.
 3.  **Sharing Observable Executions:** While there are operators like `shareReplay` often better suited for sharing the _result_ of an Observable, a Subject can sometimes be used to manually control and share a single subscription's output.
+
+## Minimal Example
+
+```typescript
+import { Subject } from "rxjs";
+
+const subject = new Subject<number>();
+
+subject.subscribe((v) => console.log(`A: ${v}`));
+subject.next(1); // only A is listening
+
+subject.subscribe((v) => console.log(`B: ${v}`)); // late subscriber: missed 1
+subject.next(2); // BOTH receive 2
+
+// Output:
+// A: 1
+// A: 2
+// B: 2
+```
 
 ## Real-World Example: Cross-Component Communication
 
@@ -90,7 +116,6 @@ import { AuthService } from "./auth.service"; // Adjust path if needed
 
 @Component({
   selector: "app-header",
-  standalone: true,
   template: `
     <nav>
       <span>My App</span>
@@ -130,14 +155,11 @@ import {
   DestroyRef,
   ChangeDetectionStrategy,
 } from "@angular/core";
-import { CommonModule } from "@angular/common"; // Needed for @if
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { AuthService, User } from "./auth.service"; // Adjust path if needed
 
 @Component({
   selector: "app-user-profile",
-  standalone: true,
-  imports: [CommonModule], // Import CommonModule
   template: `
     <div class="profile-status">
       <h4>User Status</h4>
@@ -193,7 +215,6 @@ import { UserProfileComponent } from "./user-profile.component"; // Adjust path
 
 @Component({
   selector: "app-root",
-  standalone: true,
   imports: [HeaderComponent, UserProfileComponent], // Import components
   template: `
     <h1>RxJS Subject Demo</h1>
@@ -217,3 +238,31 @@ export class AppComponent {}
 6.  `takeUntilDestroyed` ensures the subscription is cleaned up when the `UserProfileComponent` is destroyed.
 
 This demonstrates how a Subject acts as a central hub (multicasting) to notify multiple interested parties (subscribers) about events happening elsewhere in the application.
+
+## Common Mistakes
+
+**Exposing the raw Subject from a service.** Any consumer could call `next()` and impersonate the service. Keep the Subject `private` and expose `subject.asObservable()`, as in the example.
+
+**Expecting late subscribers to receive the last value.** A plain `Subject` replays nothing. If a component subscribing later needs the current state, use a [`BehaviorSubject`](behaviorSubject.md).
+
+**Reusing a terminated Subject.** After `complete()` or `error()`, a Subject is done: further `next()` calls are ignored, and new subscribers immediately get the completion or error. If the stream must restart, you need a new Subject instance.
+
+## Interview Q&A
+
+??? question "How is a Subject different from a plain Observable?"
+
+    Three ways: a Subject is an Observer as well (it has `next`, `error`, `complete`), it multicasts one execution to all subscribers instead of starting a fresh one per subscriber, and it is hot: values are pushed whether or not anyone listens.
+
+??? question "Why do services expose subject.asObservable() instead of the Subject itself?"
+
+    Encapsulation. The returned Observable has no `next` method, so only the owning service can emit. Consumers can subscribe but cannot inject values or terminate the stream.
+
+??? question "What happens if you call next() after complete()?"
+
+    Nothing is delivered. A completed Subject is closed permanently, and any new subscriber receives the complete notification immediately. The same applies after `error()`, except subscribers receive the error.
+
+## Related
+
+- [BehaviorSubject](behaviorSubject.md) when subscribers need the current value on arrival
+- [ReplaySubject](replaySubject.md) when they need recent history
+- [Subject vs BehaviorSubject vs ReplaySubject](../comparisons/subject-behaviorSubject-replaySubject.md) for the side-by-side table

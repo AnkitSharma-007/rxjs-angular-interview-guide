@@ -15,6 +15,13 @@ However, `share` behaves like it's using a plain `Subject` internally for multic
 3.  **No Replay:** If a subscriber joins _after_ the source has already emitted some values, that new subscriber **will not** receive those past values. They will only get emissions that happen _after_ they subscribed.
 4.  **Reference Counting:** It uses reference counting (`refCount` is implicitly true). The subscription to the source is active only as long as there's at least one downstream subscriber. When the last subscriber leaves, `share` unsubscribes from the source. If a new subscriber arrives later, it will re-subscribe to the source, potentially restarting it.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `share(config?)` with options like `connector`, `resetOnComplete`, `resetOnRefCountZero`
+    - **Use when:** multicasting live streams where history is irrelevant: timers, WebSocket events, DOM streams
+    - **Avoid when:** late subscribers need past values, especially cached HTTP results (use `shareReplay`)
+    - **Top gotcha:** when the last subscriber leaves (or the source completes), `share` resets by default; the next subscriber restarts the source from scratch
+
 ## Analogy
 
 Think of a **live conference call or radio talk show without any recording.**
@@ -37,6 +44,25 @@ Think of a **live conference call or radio talk show without any recording.**
 
 - **HTTP Requests (usually):** For typical `HttpClient` GET requests, you almost always want the result cached and replayed. Use `shareReplay({ bufferSize: 1, refCount: true })` instead. Using `share` would mean that if a second component subscribes slightly after the first, and the HTTP request has already completed, the second component might get _nothing_ (if the source completes quickly).
 - **State Management:** You typically want the current state value replayed, making `BehaviorSubject` or `shareReplay({ bufferSize: 1, ... })` more suitable.
+
+## Minimal Example
+
+```typescript
+import { interval, share, take } from "rxjs";
+
+const shared = interval(1000).pipe(take(4), share());
+
+shared.subscribe((v) => console.log(`A: ${v}`)); // first subscriber starts the source
+
+setTimeout(() => {
+  shared.subscribe((v) => console.log(`B: ${v}`)); // joins live: 0 and 1 are gone
+}, 2500);
+
+// A: 0
+// A: 1
+// A: 2   B: 2
+// A: 3   B: 3
+```
 
 ## Real-World Example: Shared Interval Timer for Periodic UI Updates
 
@@ -72,9 +98,9 @@ export class SharedTimerService {
       // No replay for late subscribers.
       share(),
       // --------------------
-      // Note: share() is roughly equivalent to:
-      // multicast(() => new Subject()), // Use a plain Subject (no replay)
-      // refCount() // Start/stop based on subscriber count
+      // Note: share() multicasts through an internal Subject and manages the
+      // source subscription by reference counting. The behavior is configurable:
+      // share({ connector, resetOnError, resetOnComplete, resetOnRefCountZero })
     );
   }
 }
@@ -96,7 +122,6 @@ import { SharedTimerService } from "./timer.service"; // Adjust path
 
 @Component({
   selector: "app-tick-display-a",
-  standalone: true,
   template: `
     <div class="display-box">
       <h4>Tick Display A</h4>
@@ -142,7 +167,6 @@ import { SharedTimerService } from "./timer.service"; // Adjust path
 
 @Component({
   selector: "app-tick-display-b",
-  standalone: true,
   template: `
     <div class="display-box" style="border-color: teal;">
       <h4>Tick Display B</h4>
@@ -187,7 +211,6 @@ import { TickDisplayBComponent } from "./tick-display-b.component"; // Adjust pa
 
 @Component({
   selector: "app-root",
-  standalone: true,
   imports: [TickDisplayAComponent, TickDisplayBComponent], // Import components
   template: `
     <h1>RxJS share Demo</h1>
@@ -209,3 +232,31 @@ export class AppComponent {}
 7.  If both components are destroyed, their subscriptions (managed by `takeUntilDestroyed`) end. `share` sees the subscriber count is zero and unsubscribes from the source `interval`, stopping it.
 
 This demonstrates how `share` provides a way to execute a source Observable once and multicast its _live_ values, without the buffering and replay behaviour of `shareReplay`.
+
+## Common Mistakes
+
+**Using `share()` to cache HTTP requests.** An HTTP source completes after one emission, and `share` resets on completion by default. A component subscribing after completion triggers a brand-new request, and one subscribing between requests may see nothing. Caching is [`shareReplay`](shareReplay.md)'s job.
+
+**Expecting late subscribers to catch up.** `share` has no buffer. If a subscriber must always receive the latest value on arrival, use `shareReplay({ bufferSize: 1, refCount: true })` or a `BehaviorSubject`.
+
+**Not knowing the reset options.** `share({ resetOnRefCountZero: false })` keeps the source alive after the last unsubscribe, and `resetOnComplete`/`resetOnError` control restart-after-terminal behavior. Interviewers often probe whether you know `share` is configurable.
+
+## Interview Q&A
+
+??? question "What is the difference between share and shareReplay?"
+
+    Both multicast one source subscription to many subscribers. `share` delivers only live values; `shareReplay` also buffers the last N values and hands them to late subscribers. `share` resets by default when subscribers drop to zero or the source terminates; `shareReplay`'s lifecycle depends on its `refCount` option.
+
+??? question "What happens when the subscriber count of share() drops to zero?"
+
+    By default the operator unsubscribes from the source and resets its internal Subject. The next subscriber causes a fresh subscription, restarting the source (a new interval starts at 0, a new HTTP request fires). `resetOnRefCountZero: false` opts out of this.
+
+??? question "Why is a fromEvent stream usually not wrapped in share?"
+
+    `fromEvent` is already hot: the DOM event source exists independently, and each subscription just adds a listener. `share` matters for cold sources with expensive setup (intervals, sockets, HTTP) where you want exactly one execution.
+
+## Related
+
+- [shareReplay](shareReplay.md) for multicasting plus caching
+- [Subject](subject.md), the primitive share multicasts through
+- [Hot Observables](../learn/hot-observables.md) for the underlying hot/cold model

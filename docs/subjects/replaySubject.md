@@ -8,6 +8,13 @@ tags:
 
 Think of a `ReplaySubject` as a `Subject` that **records** a history of the values that have passed through it. When a new Observer subscribes, the `ReplaySubject` immediately sends ("replays") a specified number of the most recent values from its recording to that new subscriber.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `new ReplaySubject<T>(bufferSize?, windowTime?)`
+    - **Use when:** late subscribers need recent history: activity feeds, notifications, catch-up context
+    - **Avoid when:** only the single current state matters (use `BehaviorSubject`) or history can grow unbounded
+    - **Top gotcha:** the default `bufferSize` is `Infinity`; a bare `new ReplaySubject()` retains every value ever emitted
+
 ## Key Features
 
 1.  **Records Values:** It keeps a buffer of the last `n` values that were emitted via `next()`.
@@ -34,6 +41,24 @@ Imagine a **meeting recorder or a chat log:**
     - A stream of notifications where seeing the last few is important.
     - Data streams where events happen quickly, and a subscriber might miss some if they aren't connected constantly.
 
+## Minimal Example
+
+```typescript
+import { ReplaySubject } from "rxjs";
+
+const recent = new ReplaySubject<number>(2); // keep the last 2 values
+
+recent.next(1);
+recent.next(2);
+recent.next(3); // 1 falls out of the buffer
+
+recent.subscribe((v) => console.log(`A: ${v}`));
+// A: 2   <- replayed
+// A: 3   <- replayed
+
+recent.next(4); // A: 4 (live emission)
+```
+
 ## Real-World Example: Recent Activity Log Service
 
 Let's create a service that logs recent significant actions within the application (e.g., "Item Added", "Settings Saved"). We want components that display this log to show the last 5 actions, even if the component loads after those actions have occurred.
@@ -56,7 +81,8 @@ export interface LogEntry {
 })
 export class ActivityLogService {
   // 1. Define the buffer size: Store the last 5 log entries.
-  private readonly logBufferSize = 5;
+  // Public so consumers can display the window size.
+  readonly logBufferSize = 5;
 
   // 2. Create the ReplaySubject with the specified buffer size.
   // Private to control who can add logs.
@@ -87,7 +113,6 @@ import { ActivityLogService } from "./activity-log.service"; // Adjust path
 
 @Component({
   selector: "app-action-simulator",
-  standalone: true,
   template: `
     <div>
       <h4>Simulate Actions</h4>
@@ -130,14 +155,13 @@ import {
   DestroyRef,
   ChangeDetectionStrategy,
 } from "@angular/core";
-import { CommonModule, DatePipe } from "@angular/common"; // Need DatePipe
+import { DatePipe } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { ActivityLogService, LogEntry } from "./activity-log.service"; // Adjust path
 
 @Component({
   selector: "app-activity-display",
-  standalone: true,
-  imports: [CommonModule, DatePipe], // Import CommonModule and DatePipe
+  imports: [DatePipe],
   template: `
     <div class="log-display">
       <h4>Recent Activity Log (Last {{ bufferSize }})</h4>
@@ -178,8 +202,8 @@ export class ActivityDisplayComponent implements OnInit {
   private logService = inject(ActivityLogService);
   private destroyRef = inject(DestroyRef);
 
-  // Expose buffer size to template if needed (optional)
-  bufferSize = (this.logService as any).logBufferSize; // Access private for demo - better way is getter in service
+  // Expose buffer size to template (public readonly field on the service)
+  bufferSize = this.logService.logBufferSize;
 
   // Use a signal to hold the logs for the template
   logMessages = signal<LogEntry[]>([]);
@@ -224,7 +248,6 @@ import { ActivityLogService } from "./activity-log.service"; // Adjust path
 
 @Component({
   selector: "app-root",
-  standalone: true,
   imports: [ActionSimulatorComponent, ActivityDisplayComponent], // Import components
   template: `
     <h1>RxJS ReplaySubject Demo</h1>
@@ -261,3 +284,31 @@ export class AppComponent {
 5.  As new logs are added via `addLog`, they are pushed live to the `ActivityDisplayComponent`'s subscription and added to its display.
 
 If you were to add a second instance of `ActivityDisplayComponent` to the `AppComponent` template later (e.g., after a few logs have already been added), that second instance would _also_ immediately receive the same buffered history upon subscribing, demonstrating the replay functionality for late subscribers.
+
+## Common Mistakes
+
+**Forgetting the buffer is infinite by default.** `new ReplaySubject()` keeps every value forever. Always pass an explicit `bufferSize` (usually `1` or a small number) unless you truly want full history.
+
+**Relying on `windowTime` alone for memory safety.** The time window only evicts values when emissions or subscriptions occur, and it works together with `bufferSize`. For predictable memory use, set both: `new ReplaySubject(100, 60_000)`.
+
+**Assuming it behaves like BehaviorSubject after completion.** A completed `ReplaySubject` still replays its buffer to new subscribers before completing them; a completed `BehaviorSubject` emits nothing but the completion. This subtle difference shows up in caching scenarios.
+
+## Interview Q&A
+
+??? question "What is the difference between ReplaySubject(1) and BehaviorSubject?"
+
+    `BehaviorSubject` demands an initial value, exposes `getValue()`, and after completion emits only complete. `ReplaySubject(1)` starts silent until the first `next`, has no synchronous getter, and even after completion replays the last buffered value to new subscribers. Choose by whether an initial value and synchronous access make sense.
+
+??? question "What do the two constructor arguments of ReplaySubject control?"
+
+    `bufferSize` caps how many recent values are kept; `windowTime` caps how old a buffered value may be (in milliseconds). A value is replayed only if it satisfies both limits.
+
+??? question "How does shareReplay relate to ReplaySubject?"
+
+    [`shareReplay`](shareReplay.md) uses a `ReplaySubject` internally: it multicasts a source Observable through one and replays the buffer to late subscribers. Understanding the Subject explains the operator's caching behavior, including replay-after-completion.
+
+## Related
+
+- [BehaviorSubject](behaviorSubject.md) for single current-value state
+- [shareReplay](shareReplay.md), the operator built on this Subject
+- [Subject vs BehaviorSubject vs ReplaySubject](../comparisons/subject-behaviorSubject-replaySubject.md) for the side-by-side table
