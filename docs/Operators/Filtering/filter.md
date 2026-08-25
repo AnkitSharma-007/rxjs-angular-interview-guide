@@ -17,7 +17,7 @@ It works very much like the `Array.prototype.filter()` method in JavaScript, but
 
 ## Real-World Example Scenario
 
-It's Tuesday afternoon here in Bengaluru (around 3:00 PM IST). Imagine you have a stream of incoming tasks or notifications in your Angular application. Each task object might have a `priority` property ('high', 'medium', 'low'). You might have different parts of your UI or different logic handlers interested only in tasks of a certain priority.
+Imagine you have a stream of incoming tasks or notifications in your Angular application. Each task object might have a `priority` property ('high', 'medium', 'low'). You might have different parts of your UI or different logic handlers interested only in tasks of a certain priority.
 
 **Scenario:** Let's say you want to display an urgent notification counter that only increments when a task with `'high'` priority arrives. You can use `filter()` to create a new stream containing only those high-priority tasks.
 
@@ -84,7 +84,7 @@ export class TaskFilterDemoComponent implements OnInit, OnDestroy {
           console.log(
             `[${new Date().toLocaleTimeString()}] Received Task: ID=${
               task.id
-            }, Prio=${task.priority}`
+            }, Prio=${task.priority}`,
           );
           this.allTasksLog.push(task);
           if (this.allTasksLog.length > 10) this.allTasksLog.shift(); // Keep log short
@@ -95,14 +95,14 @@ export class TaskFilterDemoComponent implements OnInit, OnDestroy {
           // It returns true only if the task's priority is 'high'.
           const shouldPass = task.priority === "high";
           console.log(
-            `   Filtering Task ID ${task.id} (Prio: ${task.priority}). Should pass? ${shouldPass}`
+            `   Filtering Task ID ${task.id} (Prio: ${task.priority}). Should pass? ${shouldPass}`,
           );
           return shouldPass;
         }),
         // The rest of the pipe only sees tasks that passed the filter
         tap((highPrioTask) => {
           console.log(`      -> Task ID ${highPrioTask.id} passed the filter!`);
-        })
+        }),
       )
       .subscribe({
         next: (highPriorityTask: Task) => {
@@ -132,7 +132,7 @@ export class TaskFilterDemoComponent implements OnInit, OnDestroy {
       priority: randomPriority,
     };
     console.log(
-      `------------------\nSimulating: Pushing task ${newTask.id} with priority ${newTask.priority}`
+      `------------------\nSimulating: Pushing task ${newTask.id} with priority ${newTask.priority}`,
     );
     this.taskSubject.next(newTask); // Push the new task onto the stream
   }

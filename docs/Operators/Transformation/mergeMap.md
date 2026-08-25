@@ -21,7 +21,7 @@ Think of it as spawning multiple asynchronous tasks based on incoming triggers a
 
 ## Real-World Example Scenario
 
-It's Monday evening here in Bengaluru (around 5:40 PM IST), and imagine you're working on a feature in an Angular application where a user can modify several pieces of data (e.g., multiple settings, or various documents in a list) and then click a single "Save All" button.
+Imagine you're working on a feature in an Angular application where a user can modify several pieces of data (e.g., multiple settings, or various documents in a list) and then click a single "Save All" button.
 
 - The click event triggers an action.
 - You get a list of items that need saving (e.g., `['settingA', 'settingB', 'documentX']`).
@@ -65,7 +65,7 @@ interface SaveResult {
         class="list-group-item"
         [ngClass]="{
           'list-group-item-success': result.success,
-          'list-group-item-danger': !result.success
+          'list-group-item-danger': !result.success,
         }"
       >
         {{ result.message }}
@@ -112,14 +112,14 @@ export class SaveAllDemoComponent {
           console.log(
             `Starting save process for: ${
               item.id
-            } at ${new Date().toLocaleTimeString()}`
-          )
+            } at ${new Date().toLocaleTimeString()}`,
+          ),
         ),
         mergeMap(
           // This function is called for each item ('doc1', 'settingA', 'userPrefX')
           (itemToSave: SaveItem) => {
             console.log(
-              `   [mergeMap] Triggering API call for: ${itemToSave.id}`
+              `   [mergeMap] Triggering API call for: ${itemToSave.id}`,
             );
             // Return the inner Observable (the HTTP PUT/POST request) for this item
             // mergeMap subscribes to this immediately and runs it concurrently with others.
@@ -145,10 +145,10 @@ export class SaveAllDemoComponent {
                       error.statusText || "Unknown error"
                     }`,
                   });
-                })
+                }),
               ); // End of inner http observable pipe
-          } // End of mergeMap project function
-        ) // End of outer pipe
+          }, // End of mergeMap project function
+        ), // End of outer pipe
       )
       .subscribe({
         next: (result: SaveResult) => {
@@ -172,7 +172,7 @@ export class SaveAllDemoComponent {
           // This is called only when the outer stream (itemsSource$) completes AND
           // *all* inner Observables spawned by mergeMap have also completed.
           console.log(
-            `All save operations finalized at ${new Date().toLocaleTimeString()}.`
+            `All save operations finalized at ${new Date().toLocaleTimeString()}.`,
           );
           this.isSaving = false;
         },

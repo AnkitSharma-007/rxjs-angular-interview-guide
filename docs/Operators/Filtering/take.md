@@ -17,7 +17,7 @@ Think of it as telling the Observable, "Just give me the first N things you have
 
 ## Real-World Example Scenario
 
-It's Thursday morning here in Bengaluru (around 8:30 AM IST). Imagine you have a feature where you want to allow the user to perform an action, but only permit them to do it a limited number of times within a certain context, perhaps the first 3 times they click a specific "Try It" button during a tutorial phase.
+Imagine you have a feature where you want to allow the user to perform an action, but only permit them to do it a limited number of times within a certain context, perhaps the first 3 times they click a specific "Try It" button during a tutorial phase.
 
 **Scenario:** You have a button. You want to react to the user clicking it, but only respond to the **first 3 clicks**. After the third click, you want to ignore any subsequent clicks on that button for that specific stream instance. `take(3)` is perfect for this.
 
@@ -75,15 +75,15 @@ export class TakeDemoComponent implements OnInit, OnDestroy {
       .pipe(
         tap((event) => {
           console.log(
-            `[${new Date().toLocaleTimeString()}] Button Clicked (Event before take)`
+            `[${new Date().toLocaleTimeString()}] Button Clicked (Event before take)`,
           );
         }),
         take(3),
         tap((event) => {
           console.log(
-            `   [${new Date().toLocaleTimeString()}] Click passed through take()`
+            `   [${new Date().toLocaleTimeString()}] Click passed through take()`,
           );
-        })
+        }),
       )
       .subscribe({
         next: (event: Event) => {

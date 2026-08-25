@@ -1,3 +1,5 @@
+> **⚠️ Deprecated:** `retryWhen` is deprecated in RxJS and slated for removal. Prefer the [`retry`](retry.md) operator with a configuration object (`retry({ count, delay })`), which handles the same scenarios, including the exponential backoff shown below, with simpler code. This page is kept for interview awareness and for maintaining older codebases.
+
 `retryWhen` gives you full control over the retry logic based on the errors that occur. Unlike `retry(n)`, which just retries immediately or with a simple configured delay, `retryWhen` lets you look at the sequence of errors and decide _if_ and _when_ to retry.
 
 It works like this:
@@ -17,7 +19,7 @@ It works like this:
 
 ## Important Note
 
-While `retryWhen` is powerful, it's also known for being complex and somewhat tricky to use correctly. For many common retry scenarios (like retrying a fixed number of times with a delay, or retrying based on error type), the simpler `retry` operator with its configuration object (`retry({ count: 3, delay: ... })`) is often **preferred and easier to understand** in modern RxJS. Use `retryWhen` when you need _highly customized_ or complex retry logic that `retry` cannot handle easily.
+While `retryWhen` is powerful, it is deprecated and known for being complex and tricky to use correctly. For retry scenarios (like retrying a fixed number of times with a delay, retrying with exponential backoff, or retrying based on error type), the `retry` operator with its configuration object (`retry({ count: 3, delay: ... })`) is **preferred and easier to understand** in modern RxJS.
 
 ## Real-World Example
 
@@ -66,17 +68,17 @@ export class UserService {
 
   getUserProfileWithRetryWhen(
     maxRetries = 3,
-    initialDelay = 1000
+    initialDelay = 1000,
   ): Observable<UserData> {
     console.log("Attempting to fetch user profile (using retryWhen)...");
     return this.http.get<UserData>(this.apiUrl).pipe(
       tap(() =>
-        console.log("Fetched user profile successfully on an attempt.")
+        console.log("Fetched user profile successfully on an attempt."),
       ),
       // --- retryWhen Logic ---
       retryWhen(
         (
-          errors$ // errors$ is an Observable of the errors
+          errors$, // errors$ is an Observable of the errors
         ) =>
           errors$.pipe(
             // Use scan to keep track of the retry attempts
@@ -94,7 +96,7 @@ export class UserService {
                     retryCount + 1
                   }: Not retrying. Max retries (${maxRetries}) reached or error not retryable (${
                     error.status
-                  }).`
+                  }).`,
                 );
                 throw error; // Re-throw the error to be caught by the outer catchError
               }
@@ -102,7 +104,7 @@ export class UserService {
               console.warn(
                 `Attempt ${retryCount + 1} failed. Error: ${
                   error.message
-                }. Will retry.`
+                }. Will retry.`,
               );
               return retryCount + 1;
             }, 0), // Initial value for retryCount is 0
@@ -110,28 +112,28 @@ export class UserService {
             delayWhen((retryCount) => {
               const delay = initialDelay * Math.pow(2, retryCount - 1); // Calculate delay: 1000ms, 2000ms, 4000ms...
               console.log(
-                `Attempt ${retryCount}: Waiting ${delay}ms before next retry...`
+                `Attempt ${retryCount}: Waiting ${delay}ms before next retry...`,
               );
               return timer(delay); // Emit after the calculated delay
-            })
+            }),
             // Note: If the scan operator above throws an error, this delayWhen
             // will not execute, and the error propagates immediately.
-          )
+          ),
       ),
       // --- End of retryWhen Logic ---
       catchError((error: HttpErrorResponse) => {
         // This runs AFTER retryWhen gives up (notifier stream errors out)
         console.error(
           "Failed to fetch user profile after all retryWhen attempts:",
-          error
+          error,
         );
         return throwError(
           () =>
             new Error(
-              "Could not load user profile (retryWhen). Please try again later."
-            )
+              "Could not load user profile (retryWhen). Please try again later.",
+            ),
         );
-      })
+      }),
     );
   }
 }
@@ -161,17 +163,17 @@ import { EMPTY } from "rxjs";
   template: `
     <h3>User Profile (retryWhen Example)</h3>
     @if (loading()) {
-    <p>Loading user profile...</p>
+      <p>Loading user profile...</p>
     } @else if (errorMsg()) {
-    <p style="color: red;">Error: {{ errorMsg() }}</p>
+      <p style="color: red;">Error: {{ errorMsg() }}</p>
     } @else if (userProfile()) {
-    <div>
-      <p><strong>ID:</strong> {{ userProfile()?.id }}</p>
-      <p><strong>Name:</strong> {{ userProfile()?.name }}</p>
-      <p><strong>Email:</strong> {{ userProfile()?.email }}</p>
-    </div>
+      <div>
+        <p><strong>ID:</strong> {{ userProfile()?.id }}</p>
+        <p><strong>Name:</strong> {{ userProfile()?.name }}</p>
+        <p><strong>Email:</strong> {{ userProfile()?.email }}</p>
+      </div>
     } @else {
-    <p>Click the button to load profile.</p>
+      <p>Click the button to load profile.</p>
     }
 
     <button (click)="loadProfile()" [disabled]="loading()">
@@ -209,7 +211,7 @@ export class UserProfileRetryWhenComponent {
         finalize(() => {
           this.loading.set(false);
           console.log("Finished loading attempt (success or final error).");
-        })
+        }),
       )
       .subscribe({
         next: (data) => {

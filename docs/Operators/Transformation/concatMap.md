@@ -21,7 +21,7 @@ Think of it as processing tasks in a single-file line: the next task only starts
 
 ## Real-World Example Scenario
 
-It's Tuesday afternoon here in Bengaluru (around 2:50 PM IST), and imagine you're building a feature where a user can trigger several updates that need to be applied to a database or configuration file in a specific order to maintain consistency.
+Imagine you're building a feature where a user can trigger several updates that need to be applied to a database or configuration file in a specific order to maintain consistency.
 
 **Scenario:** A user is rapidly clicking buttons to add different items to a configuration profile ("Add Feature A", "Enable Setting B", "Add User C"). Each click triggers an API call to update the profile. If these updates happened concurrently (`mergeMap`), they might interfere with each other or lead to an inconsistent final state depending on server response times. If you used `switchMap`, clicking "Enable Setting B" might cancel the "Add Feature A" request if it was still pending.
 
@@ -91,7 +91,7 @@ interface UpdateResult {
             'list-group-item-success': log.includes('Success'),
             'list-group-item-danger': log.includes('Failed'),
             'list-group-item-secondary':
-              log.includes('Queueing') || log.includes('Starting')
+              log.includes('Queueing') || log.includes('Starting'),
           }"
         >
           {{ log }}
@@ -132,7 +132,7 @@ export class SequentialUpdatesComponent implements OnDestroy {
             success: true,
             received: action.payload,
           }).pipe(
-            delay(1500 + Math.random() * 1000) // Simulate network latency (1.5 - 2.5 seconds)
+            delay(1500 + Math.random() * 1000), // Simulate network latency (1.5 - 2.5 seconds)
           );
           // const innerApiCall$ = this.http.post<any>(action.apiUrl, action.payload)
 
@@ -147,7 +147,7 @@ export class SequentialUpdatesComponent implements OnDestroy {
             catchError((error) => {
               console.error(
                 `Error processing ${action.type} (ID: ${action.id}):`,
-                error
+                error,
               );
               // Return an Observable emitting the failure result
               return of({
@@ -157,9 +157,9 @@ export class SequentialUpdatesComponent implements OnDestroy {
                   error.message || "Unknown error"
                 }`,
               });
-            })
+            }),
           ); // End of inner pipe
-        }) // End of concatMap
+        }), // End of concatMap
       )
       .subscribe({
         next: (result: UpdateResult) => {
@@ -195,7 +195,7 @@ export class SequentialUpdatesComponent implements OnDestroy {
     console.log(
       `[${new Date().toLocaleTimeString()}] Button clicked, pushing action: ${type} (ID: ${
         action.id
-      })`
+      })`,
     );
     this.actionSubject.next(action); // Push the action onto the Subject stream
   }

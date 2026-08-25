@@ -5,7 +5,6 @@ Let's clarify the difference between the RxJS constants `EMPTY` and `NEVER`. Bot
 Think of it like this: Both represent a stream that will _never give you any data_ (no `next` emissions). The difference lies in whether they tell you they are finished or just stay silent forever.
 
 1.  **`EMPTY`**
-
     - **What it does:** Represents an Observable that emits **zero** items.
     - **Key Behavior:** As soon as you subscribe to it, it immediately sends a **`complete`** notification.
     - **Analogy:** It's like a function that returns immediately without doing anything (`return;`), or reading an empty file. It quickly signals "I have nothing to give you, and I'm done."
@@ -36,11 +35,7 @@ import { EMPTY, NEVER, Subscription } from "rxjs";
   selector: "app-empty-never-demo",
   template: `
     <h4>EMPTY vs NEVER Demo</h4>
-    <p>
-      Check the console log at ${new Date().toLocaleTimeString("en-IN", {
-        timeZone: "Asia/Kolkata",
-      })} (IST).
-    </p>
+    <p>Check the console log.</p>
     <p>EMPTY Status: {{ emptyStatus }}</p>
     <p>NEVER Status: {{ neverStatus }}</p>
   `,
@@ -66,14 +61,14 @@ export class EmptyNeverDemoComponent implements OnInit, OnDestroy {
       complete: () => {
         // This is called immediately!
         console.log(
-          `EMPTY: complete! (Called immediately) at ${new Date().toLocaleTimeString()}`
+          `EMPTY: complete! (Called immediately) at ${new Date().toLocaleTimeString()}`,
         );
         this.emptyStatus = "Completed immediately";
       },
     });
     // The line below will likely log 'Completed immediately' because EMPTY completes synchronously
     console.log(
-      `Current EMPTY status after sync subscribe: ${this.emptyStatus}`
+      `Current EMPTY status after sync subscribe: ${this.emptyStatus}`,
     );
 
     console.log(`\n--- Subscribing to NEVER ---`);
@@ -94,14 +89,14 @@ export class EmptyNeverDemoComponent implements OnInit, OnDestroy {
     });
     // NEVER does nothing, so status remains 'Subscribing...'
     console.log(
-      `Current NEVER status after sync subscribe: ${this.neverStatus}`
+      `Current NEVER status after sync subscribe: ${this.neverStatus}`,
     );
 
     // Set a timeout just to show NEVER doesn't complete on its own
     setTimeout(() => {
       if (this.neverStatus === "Subscribing...") {
         console.log(
-          "\nAfter 2 seconds, NEVER still hasn't emitted or completed."
+          "\nAfter 2 seconds, NEVER still hasn't emitted or completed.",
         );
         this.neverStatus = "Still running after 2s (as expected)";
       }

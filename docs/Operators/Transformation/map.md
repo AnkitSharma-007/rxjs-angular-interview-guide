@@ -65,10 +65,7 @@ export class ProductService {
   // Method to get only the product names as an Observable<string[]>
   getProductNames(): Observable<string[]> {
     console.log(
-      `Workspaceing products from API at ${new Date().toLocaleTimeString(
-        "en-IN",
-        { timeZone: "Asia/Kolkata" }
-      )} (IST)...`
+      `Fetching products from API at ${new Date().toLocaleTimeString()}...`,
     );
 
     return this.http.get<RawProduct[]>(this.apiUrl).pipe(
@@ -84,7 +81,7 @@ export class ProductService {
         console.log("Transformed raw products into names:", names);
         // Return the transformed array of names
         return names;
-      })
+      }),
       // You could chain other operators here if needed, like filter, catchError etc.
     );
   }
@@ -99,8 +96,8 @@ export class ProductService {
             // Then map to the desired summary object
             name: p.productName.toUpperCase(), // Also transform name to uppercase
             price: p.price.amount,
-          }))
-      )
+          })),
+      ),
     );
   }
 }
@@ -122,7 +119,7 @@ import { Observable } from "rxjs";
     <h4>Active Product Summaries</h4>
     <ul *ngIf="productSummaries$ | async as summaries; else loadingSummaries">
       <li *ngFor="let summary of summaries">
-        {{ summary.name }} - Price: {{ summary.price | currency : "INR" }}
+        {{ summary.name }} - Price: {{ summary.price | currency: "INR" }}
       </li>
     </ul>
     <ng-template #loadingSummaries>Loading summaries...</ng-template>

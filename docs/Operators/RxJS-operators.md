@@ -13,8 +13,8 @@ Think of operators as tools in a workshop for working with your asynchronous dat
       - [`interval`](../Operators/Creation/interval.md): Emits sequential numbers every specified interval (in milliseconds).
       - [`timer`](../Operators/Creation/timer.md): Emits one value after an initial delay, then optionally emits subsequent values at a regular interval.
       - `throwError(() => new Error('Oops!'))`: Creates an Observable that immediately emits an error.
-      - [`EMPTY`](../Operators//Creation/empty-never.md): Creates an Observable that emits no items and immediately completes.
-      - [`NEVER`](../Operators//Creation/empty-never.md): Creates an Observable that never emits any items and never completes.
+      - [`EMPTY`](../Operators/Creation/empty-never.md): Creates an Observable that emits no items and immediately completes.
+      - [`NEVER`](../Operators/Creation/empty-never.md): Creates an Observable that never emits any items and never completes.
 
 ## Transformation Operators
 
@@ -22,7 +22,6 @@ Think of operators as tools in a workshop for working with your asynchronous dat
 - **Examples:**
 
       - [`map`](../Operators/Transformation/map.md): Applies a function to each emitted value.
-      - `pluck('propertyName')`: Selects a nested property from each emitted object.
       - `scan((acc, value) => acc + value, 0)`: Accumulates values over time, like `Array.reduce`.
       - [`mergeMap`](../Operators/Transformation/mergeMap.md): Projects each source value to an Observable and merges their emissions into a single stream. Good for handling multiple inner observables concurrently.
       - [`switchMap`](../Operators/Transformation/switchMap.md): Projects each source value to an Observable, but cancels the previous inner Observable when a new source value arrives. Ideal for scenarios like type-ahead searches where you only care about the latest request.
@@ -63,7 +62,7 @@ Think of operators as tools in a workshop for working with your asynchronous dat
 
       - [`catchError`](../Operators/Error/catchError.md): Catches errors from the source Observable and either returns a replacement Observable (e.g., emitting a default value) or re-throws the error (or a new one).
       - [`retry`](../Operators/Error/retry.md): Re-subscribes to the source Observable up to N times if it encounters an error.
-      - [`retryWhen`](../Operators/Error/retryWhen.md): Re-subscribes based on logic defined in a notifier Observable (e.g., retry after a delay).
+      - [`retryWhen`](../Operators/Error/retryWhen.md): Re-subscribes based on logic defined in a notifier Observable. Deprecated; prefer `retry` with a configuration object (`retry({ count, delay })`).
 
 ## Utility Operators
 
@@ -83,7 +82,7 @@ Think of operators as tools in a workshop for working with your asynchronous dat
 
       - [`share`](../Operators/Multicasting/share.md): Shares a single subscription but doesn't necessarily replay past values. Subscription starts with the first subscriber and stops when the last one unsubscribes.
       - [`shareReplay`](../Operators/Multicasting/shareReplay.md): Shares a single subscription _and_ replays the last `bufferSize` emissions to new subscribers. Often used with `bufferSize: 1` to share API calls. The underlying subscription might stay active even after subscribers leave, depending on configuration.
-      - `publish()`, `multicast()`: Lower-level operators for more complex multicasting scenarios, often used with Subjects.
+      - `connectable()`, `connect()`: Lower-level multicasting tools for more complex scenarios, often used with Subjects. They replace the older `publish()`/`multicast()` operators, which are deprecated.
 
 ## Conditional and Boolean Operators
 

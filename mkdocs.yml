@@ -31,7 +31,7 @@ nav:
           - "interval": Operators/Creation/interval.md
           - "of": Operators/Creation/of.md
           - "timer": Operators/Creation/timer.md
-      - "Error Handeling":
+      - "Error Handling":
           - "catchError": Operators/Error/catchError.md
           - "retry": Operators/Error/retry.md
           - "retryWhen": Operators/Error/retryWhen.md

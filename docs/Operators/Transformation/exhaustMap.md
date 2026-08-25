@@ -17,7 +17,7 @@ Think of it like a busy worker who takes the first task assigned. While working 
 
 ## Real-World Example Scenario
 
-It's Tuesday afternoon here in Bengaluru (just before 3 PM IST), and a classic scenario where `exhaustMap` shines is **preventing double form submissions**.
+A classic scenario where `exhaustMap` shines is **preventing double form submissions**.
 
 **Scenario:** A user fills out a form in your Angular application and clicks the "Submit" button. This click should trigger an API call to save the data. However, users sometimes get impatient or accidentally double-click the button. If you used `mergeMap`, you might send the same data twice concurrently. If you used `concatMap`, the second click would be queued and executed after the first completes (still potentially undesirable). If you used `switchMap`, the second click might cancel the first save attempt (definitely not what you want!).
 
@@ -81,7 +81,7 @@ interface SubmitResult {
             'list-group-item-info': log.includes('Ignoring'),
             'list-group-item-warning': log.includes('Starting'),
             'list-group-item-success': log.includes('Success'),
-            'list-group-item-danger': log.includes('Failed')
+            'list-group-item-danger': log.includes('Failed'),
           }"
         >
           {{ log }}
@@ -105,7 +105,7 @@ export class SubmitOnceComponent implements OnDestroy {
           // This tap happens *before* exhaustMap decides whether to proceed or ignore
           // Useful for logging the intention, but not the actual start of the API call yet
           console.log(
-            `[${new Date().toLocaleTimeString()}] Submit detected by Subject.`
+            `[${new Date().toLocaleTimeString()}] Submit detected by Subject.`,
           );
           // Note: We don't set isSubmitting = true here yet, only when exhaustMap *starts* the inner observable.
         }),
@@ -125,7 +125,7 @@ export class SubmitOnceComponent implements OnDestroy {
             status: "Saved",
             dataReceived: payload,
           }).pipe(
-            delay(2500) // Simulate 2.5 second save operation
+            delay(2500), // Simulate 2.5 second save operation
           );
           // const innerApiCall$ = this.http.post<any>('/api/formdata', payload)
 
@@ -151,11 +151,11 @@ export class SubmitOnceComponent implements OnDestroy {
             tap(() => {
               this.isSubmitting = false; // Unset loading state when inner observable completes/errors
               console.log(
-                `[${new Date().toLocaleTimeString()}] exhaustMap finished inner observable. Ready for next event.`
+                `[${new Date().toLocaleTimeString()}] exhaustMap finished inner observable. Ready for next event.`,
               );
-            }) // Final tap ensures isSubmitting is reset
+            }), // Final tap ensures isSubmitting is reset
           ); // End of inner pipe
-        }) // End of exhaustMap
+        }), // End of exhaustMap
       )
       .subscribe({
         next: (result: SubmitResult) => {

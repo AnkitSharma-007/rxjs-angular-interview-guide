@@ -1,0 +1,35 @@
+name: pr-checks
+on:
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  build:
+    name: Strict MkDocs build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - run: pip install mkdocs-material
+      - run: mkdocs build --strict
+  links:
+    name: Link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Markdown links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # placeholder domains appear in code samples; retries reduce external flakiness
+          args: >-
+            --no-progress
+            --max-retries 2
+            --exclude example.com
+            --exclude api.example.com
+            "docs/**/*.md"
+            "README.md"
+          fail: true

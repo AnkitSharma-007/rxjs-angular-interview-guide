@@ -19,7 +19,7 @@ Essentially, `switchMap` **cancels** the previous ongoing inner operation and sw
 
 ## Real-World Example Scenario (The Classic Use Case): Type-Ahead Search
 
-This is the quintessential example for `switchMap`. Imagine you have a search input field in your Angular application (perhaps you're building one right now, Monday evening here in Bengaluru!). As the user types, you want to make API calls to fetch search suggestions.
+This is the quintessential example for `switchMap`. Imagine you have a search input field in your Angular application. As the user types, you want to make API calls to fetch search suggestions.
 
 - User types "a" -> Trigger API call for "a"
 - User quickly types "n" (now input is "an") -> Trigger API call for "an" -> **`switchMap` cancels the pending API call for "a"**
@@ -98,7 +98,7 @@ export class TypeaheadSearchComponent implements OnInit, OnDestroy {
     // 1. Get the stream of input events from the input element
     const inputEvents$ = fromEvent<InputEvent>(
       this.searchInput.nativeElement,
-      "input"
+      "input",
     );
 
     this.results$ = inputEvents$.pipe(
@@ -114,16 +114,13 @@ export class TypeaheadSearchComponent implements OnInit, OnDestroy {
       // 5. Show loading indicator and log the term
       tap((term) => {
         console.log(
-          `Searching for: "${term}" at ${new Date().toLocaleTimeString()}`
+          `Searching for: "${term}" at ${new Date().toLocaleTimeString()}`,
         );
         this.loading = term.length > 0; // Show loading only if there's a term
         this.searchError = null; // Clear previous errors
         this.lastSearchTerm = term; // Keep track of the term searched
-        if (!term) {
-          // Clear results immediately if input is empty, without API call
-          return of([]); // Need to return an observable for switchMap
-        }
-        return undefined; // Continue the main pipe if term exists
+        // tap is for side effects only; its return value is ignored.
+        // The empty-term case is handled inside switchMap below.
       }),
 
       // 6. The core: switchMap! Map the search term to an HTTP request Observable
@@ -166,12 +163,12 @@ export class TypeaheadSearchComponent implements OnInit, OnDestroy {
             })`;
             this.loading = false;
             return of([]); // Return an empty array Observable on error to keep the stream alive
-          })
+          }),
         );
       }),
 
       // 7. Hide loading indicator after results arrive or error handled
-      tap(() => (this.loading = false))
+      tap(() => (this.loading = false)),
     );
 
     // We can let the async pipe handle the subscription in the template
