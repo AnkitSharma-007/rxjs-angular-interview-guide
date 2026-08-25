@@ -14,6 +14,13 @@ The `filter()` operator is, as the name suggests, a **filtering operator**. It l
 
 It works very much like the `Array.prototype.filter()` method in JavaScript, but operates on values emitted asynchronously over time by an Observable.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `filter(predicate: (value, index) => boolean)`
+    - **Use when:** discarding emissions that downstream logic should never see: wrong priority, null payloads, unwanted event types
+    - **Avoid when:** you want to stop after the first match (`first`/`find` complete for you) or transform values (`map`)
+    - **Top gotcha:** `filter` never completes a stream; if nothing matches, the stream is simply silent, not done
+
 ## Key Characteristics
 
 - **Conditional Emission:** Only emits values that satisfy the condition defined in the predicate function.
@@ -21,6 +28,18 @@ It works very much like the `Array.prototype.filter()` method in JavaScript, but
 - **Doesn't Modify Values:** It doesn't change the content of the values that pass through; it only decides _if_ they pass.
 - **Preserves Relative Order:** The values that do pass maintain their original relative order.
 - **Passes Through Errors/Completion:** If the source Observable errors or completes, `filter` passes those notifications along immediately.
+
+## Minimal Example
+
+```typescript
+import { from, filter } from "rxjs";
+
+from([1, 2, 3, 4, 5, 6])
+  .pipe(filter((n) => n % 2 === 0))
+  .subscribe(console.log);
+
+// 2, 4, 6
+```
 
 ## Real-World Example Scenario
 
@@ -31,9 +50,9 @@ Imagine you have a stream of incoming tasks or notifications in your Angular app
 ## Code Snippet (Angular Component - Filtering High-Priority Tasks)
 
 ```typescript
-import { Component, OnInit, OnDestroy } from "@angular/core";
-import { Subject, Subscription } from "rxjs";
-import { filter, tap } from "rxjs/operators"; // Import filter
+import { Component, signal } from "@angular/core";
+import { Subject, filter } from "rxjs";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 
 interface Task {
   id: number;
@@ -44,126 +63,79 @@ interface Task {
 @Component({
   selector: "app-task-filter-demo",
   template: `
-    <h4>Task Filtering Demo</h4>
-    <p>Simulating incoming tasks. Check console log and high priority list.</p>
-    <button (click)="simulateIncomingTask()" class="btn btn-secondary">
-      Simulate New Task
-    </button>
+    <button (click)="simulateIncomingTask()">Simulate New Task</button>
 
-    <div class="mt-3">
-      <h5>High Priority Tasks Only (Count: {{ highPriorityTaskCount }})</h5>
-      <ul class="list-group">
-        <li
-          *ngFor="let task of highPriorityTasks"
-          class="list-group-item list-group-item-danger small"
-        >
-          ID: {{ task.id }} - {{ task.description }}
-        </li>
-      </ul>
-    </div>
-    <div class="mt-3">
-      <h5>All Tasks Log:</h5>
-      <ul class="list-group">
-        <li *ngFor="let task of allTasksLog" class="list-group-item small">
-          ID: {{ task.id }} - {{ task.description }} (Priority:
-          {{ task.priority }})
-        </li>
-      </ul>
-    </div>
+    <h5>High priority only ({{ highPriorityTasks().length }})</h5>
+    <ul>
+      @for (task of highPriorityTasks(); track task.id) {
+        <li>ID: {{ task.id }} - {{ task.description }}</li>
+      }
+    </ul>
   `,
 })
-export class TaskFilterDemoComponent implements OnInit, OnDestroy {
-  highPriorityTaskCount = 0;
-  highPriorityTasks: Task[] = [];
-  allTasksLog: Task[] = [];
-
-  // Use a Subject to simulate a stream of incoming tasks
-  private taskSubject = new Subject<Task>();
-  private taskSubscription: Subscription | undefined;
+export class TaskFilterDemoComponent {
+  private readonly tasks$ = new Subject<Task>();
   private taskIdCounter = 0;
 
-  ngOnInit(): void {
-    // Subscribe to the task stream
-    this.taskSubscription = this.taskSubject
+  protected readonly highPriorityTasks = signal<Task[]>([]);
+
+  constructor() {
+    this.tasks$
       .pipe(
-        tap((task) => {
-          // Log every task that comes in *before* filtering
-          console.log(
-            `[${new Date().toLocaleTimeString()}] Received Task: ID=${
-              task.id
-            }, Prio=${task.priority}`,
-          );
-          this.allTasksLog.push(task);
-          if (this.allTasksLog.length > 10) this.allTasksLog.shift(); // Keep log short
-        }),
-        // Apply the filter operator
-        filter((task: Task) => {
-          // This is the predicate function.
-          // It returns true only if the task's priority is 'high'.
-          const shouldPass = task.priority === "high";
-          console.log(
-            `   Filtering Task ID ${task.id} (Prio: ${task.priority}). Should pass? ${shouldPass}`,
-          );
-          return shouldPass;
-        }),
-        // The rest of the pipe only sees tasks that passed the filter
-        tap((highPrioTask) => {
-          console.log(`      -> Task ID ${highPrioTask.id} passed the filter!`);
-        }),
+        // only high-priority tasks pass; the rest are discarded here
+        filter((task) => task.priority === "high"),
+        takeUntilDestroyed(),
       )
-      .subscribe({
-        next: (highPriorityTask: Task) => {
-          // This 'next' handler only receives tasks where priority === 'high'
-          this.highPriorityTaskCount++;
-          this.highPriorityTasks.push(highPriorityTask);
-          if (this.highPriorityTasks.length > 5) this.highPriorityTasks.shift(); // Keep list short
-        },
-        error: (err) => console.error("Task stream error:", err),
-        // complete: () => console.log('Task stream completed') // Only if subject completes
-      });
+      .subscribe((task) =>
+        this.highPriorityTasks.update((list) => [...list.slice(-4), task]),
+      );
   }
 
   simulateIncomingTask(): void {
-    this.taskIdCounter++;
-    const priorities: Array<"high" | "medium" | "low"> = [
-      "low",
-      "medium",
-      "high",
-    ];
-    const randomPriority =
-      priorities[Math.floor(Math.random() * priorities.length)];
-
-    const newTask: Task = {
-      id: this.taskIdCounter,
+    const priorities = ["low", "medium", "high"] as const;
+    this.tasks$.next({
+      id: ++this.taskIdCounter,
       description: `Simulated task number ${this.taskIdCounter}`,
-      priority: randomPriority,
-    };
-    console.log(
-      `------------------\nSimulating: Pushing task ${newTask.id} with priority ${newTask.priority}`,
-    );
-    this.taskSubject.next(newTask); // Push the new task onto the stream
-  }
-
-  ngOnDestroy(): void {
-    if (this.taskSubscription) {
-      this.taskSubscription.unsubscribe();
-    }
-    this.taskSubject.complete();
+      priority: priorities[Math.floor(Math.random() * priorities.length)],
+    });
   }
 }
 ```
 
 **Explanation:**
 
-1.  **`Subject<Task>`**: We use a Subject to mimic an Observable stream where `Task` objects arrive over time (triggered by the button click).
-2.  **`tap(...)` (before filter)**: We use `tap` to log every task that enters the pipe, _before_ it hits the filter, so we can see everything that arrives.
-3.  **`filter((task: Task) => task.priority === 'high')`**: This is the core.
-    - The `filter` operator receives each `Task` object emitted by the `taskSubject`.
-    - The predicate function `(task: Task) => task.priority === 'high'` checks if the `priority` property of the task is strictly equal to `'high'`.
-    - If it is `true`, the `task` object is passed further down the pipe.
-    - If it is `false` (i.e., priority is 'medium' or 'low'), the `task` object is discarded by `filter`.
-4.  **`tap(...)` (after filter)**: We log again here to clearly see which tasks made it _through_ the filter.
-5.  **`subscribe({ next: ... })`**: The `next` handler will _only_ be executed for tasks that passed the filter (those with 'high' priority). We update the count and the list based on these filtered tasks.
+1.  **`Subject<Task>`**: Mimics an Observable stream where `Task` objects arrive over time (triggered by the button click).
+2.  **`filter((task) => task.priority === "high")`**: The predicate runs for every task. Only tasks returning `true` continue downstream; medium and low priority tasks are discarded and the subscriber never sees them.
+3.  **`subscribe(...)`**: Runs only for high-priority tasks and appends them to the signal that drives the template.
+4.  **`takeUntilDestroyed()`**: Ends the subscription when the component is destroyed, since the Subject itself never completes.
+
+## Common Mistakes
+
+**Filtering without narrowing the type.** `filter((x) => x !== null)` still leaves `T | null` in TypeScript. Use a type-guard predicate, `filter((x): x is T => x !== null)`, so downstream operators get the narrowed type.
+
+**Using `filter(Boolean)` carelessly.** It removes `null` and `undefined`, but also `0`, `""`, and `false`. If those are valid values, write the explicit predicate.
+
+**Waiting for completion that never comes.** A stream whose values are all filtered out does not complete; it just never emits. Completion still depends on the source (or operators like `take`).
+
+## Interview Q&A
+
+??? question "How does RxJS filter differ from Array.prototype.filter?"
+
+    Same idea, different domain: `Array.filter` synchronously produces a new array from existing items; RxJS `filter` decides per emission, over time, whether a value continues down the stream. There is no collection to return, only pass or discard as values arrive.
+
+??? question "How do you keep TypeScript types accurate through a filter?"
+
+    Give the predicate a type-guard signature: `filter((value): value is User => value !== null)`. RxJS's typings then narrow the output Observable's type from `User | null` to `User`.
+
+??? question "What is the difference between filter and find in RxJS?"
+
+    `filter` lets every matching value through and never terminates the stream itself. [`find`](find.md) emits only the first match and then completes, unsubscribing from the source.
+
+## Related
+
+- [find](find.md) and [first](first.md) to stop after the first match
+- [distinctUntilChanged](distinctUntilChanged.md) to drop repeats instead of non-matches
+- [map](../transformation/map.md) to transform what passes through
 
 ## Summary
 

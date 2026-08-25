@@ -16,12 +16,37 @@ Think of it like this: `debounceTime()` waits for a **pause** in the emissions f
 
 In short, it only emits a value after a specific period of **silence** from the source Observable.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `debounceTime(dueTime)`
+    - **Use when:** bursty input where only the settled value matters: typing, window resize, slider drags
+    - **Avoid when:** you need periodic values during continuous activity, or intermediate values must not be lost
+    - **Top gotcha:** nothing is emitted until the source stays silent for `dueTime`; a stream that never pauses starves everything downstream
+
 ## Key Characteristics
 
 1.  **Requires Silence:** It waits for a specified duration (`dueTime`) where no new values are emitted by the source.
 2.  **Emits Last Value:** When the silence duration is met, it emits the _most recent_ value received from the source _before_ the silence began.
 3.  **Resets Timer:** Each new emission from the source before the `dueTime` expires resets the timer. Intermediate values are discarded.
 4.  **Rate Limiting:** Effectively limits the rate at which values pass through, based on pauses in activity.
+
+## Minimal Example
+
+```typescript
+import { Subject, debounceTime } from "rxjs";
+
+const keystrokes$ = new Subject<string>();
+
+keystrokes$.pipe(debounceTime(300)).subscribe(console.log);
+
+keystrokes$.next("L");
+keystrokes$.next("La");
+keystrokes$.next("Lap"); // rapid emissions keep resetting the 300ms timer
+setTimeout(() => keystrokes$.next("Laptop"), 100);
+
+// After 300ms of silence, exactly one value comes through:
+// Laptop
+```
 
 ## Real-World Analogy: Autocomplete Search Box
 
@@ -38,28 +63,16 @@ You don't want to send an API request to your server for _every single letter_ t
 
 ## Angular Example: Typeahead Search Input
 
-Let's refine the Angular search component using `debounceTime`.
-
 ```typescript
-import { Component, OnInit, inject } from "@angular/core";
-import { FormControl, ReactiveFormsModule } from "@angular/forms"; // Need ReactiveFormsModule
-import { HttpClient } from "@angular/common/http"; // Assuming API call
-import { Observable, of } from "rxjs";
-import {
-  debounceTime, // <-- The operator we're focusing on
-  distinctUntilChanged, // Prevent duplicates
-  switchMap, // Handle async operations, cancel previous
-  catchError, // Handle API errors
-  tap, // For side-effects like loading indicators
-} from "rxjs/operators";
-import { DestroyRef } from "@angular/core";
-import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { NgFor, NgIf, AsyncPipe } from "@angular/common"; // Need CommonModule directives/pipes
+import { Component, inject } from "@angular/core";
+import { HttpClient } from "@angular/common/http";
+import { FormControl, ReactiveFormsModule } from "@angular/forms";
+import { toSignal } from "@angular/core/rxjs-interop";
+import { debounceTime, distinctUntilChanged, of, switchMap } from "rxjs";
 
 @Component({
   selector: "app-efficient-search",
-  standalone: true,
-  imports: [ReactiveFormsModule, NgFor, NgIf, AsyncPipe],
+  imports: [ReactiveFormsModule],
   template: `
     <input
       type="search"
@@ -67,96 +80,70 @@ import { NgFor, NgIf, AsyncPipe } from "@angular/common"; // Need CommonModule d
       placeholder="Enter search term..."
     />
 
-    <div *ngIf="isLoading" class="loading-indicator">Searching...</div>
-
-    <ul *ngIf="results$ | async as searchResults">
-      <li *ngFor="let result of searchResults">{{ result }}</li>
-      <li
-        *ngIf="searchResults.length === 0 && searchControl.value && !isLoading"
-      >
-        No results found.
-      </li>
+    <ul>
+      @for (result of results(); track result) {
+        <li>{{ result }}</li>
+      } @empty {
+        <li>No results yet.</li>
+      }
     </ul>
-
-    <div *ngIf="errorMsg" class="error-message">{{ errorMsg }}</div>
   `,
 })
-export class EfficientSearchComponent implements OnInit {
-  searchControl = new FormControl("");
-  results$: Observable<string[]>; // Observable stream for results
-  isLoading = false;
-  errorMsg: string | null = null;
+export class EfficientSearchComponent {
+  private readonly http = inject(HttpClient);
 
-  // Use inject() for dependencies
-  private http = inject(HttpClient);
-  private destroyRef = inject(DestroyRef);
+  protected readonly searchControl = new FormControl("", {
+    nonNullable: true,
+  });
 
-  ngOnInit() {
-    this.results$ = this.searchControl.valueChanges.pipe(
-      // 1. DEBOUNCE: Wait for 300ms pause after last keystroke
-      debounceTime(300),
-
-      // 2. DISTINCT: Only proceed if the text is different from the last debounced value
-      distinctUntilChanged(),
-
-      // 3. TAP (Side-effect): Show loading, clear errors before making the call
-      tap((term) => {
-        if (term && term.length > 0) {
-          // Only show loading for actual searches
-          this.isLoading = true;
-          this.errorMsg = null;
-        } else {
-          this.isLoading = false; // Hide loading if input is cleared
-        }
-        console.log(`Debounced search term: "${term}"`);
-      }),
-
-      // 4. SWITCHMAP: Make the API call, cancel previous if new term arrives
-      switchMap((term) => {
-        if (!term || term.length < 1) {
-          // If input is empty or too short, return empty array immediately
-          return of([]); // 'of([])' returns an Observable<string[]>
-        }
-        // Replace with your actual API search function
-        return this.searchApi(term).pipe(
-          catchError((err) => {
-            console.error("API Search Error:", err);
-            this.errorMsg = "Search failed. Please try again.";
-            return of([]); // Return empty on error
-          }),
-        );
-      }),
-
-      // 5. TAP (Side-effect): Hide loading after API call completes (success or handled error)
-      tap(() => {
-        this.isLoading = false;
-      }),
-
-      // 6. AUTOCLEANUP: Ensure subscription is managed
-      takeUntilDestroyed(this.destroyRef),
-    );
-  }
-
-  // Dummy search API function
-  private searchApi(term: string): Observable<string[]> {
-    console.log(`--- Making API call for: "${term}" ---`);
-    // In a real app: return this.http.get<string[]>(`/api/search?q=${term}`);
-    const mockResults = term
-      ? [`${term} - result 1`, `${term} - result 2`]
-      : [];
-    return of(mockResults).pipe(delay(500)); // Simulate network delay
-  }
+  protected readonly results = toSignal(
+    this.searchControl.valueChanges.pipe(
+      debounceTime(300), // wait for a 300ms pause in typing
+      distinctUntilChanged(), // skip if the settled value did not change
+      switchMap((term) =>
+        term
+          ? this.http.get<string[]>("/api/search", { params: { q: term } })
+          : of([]),
+      ),
+    ),
+    { initialValue: [] },
+  );
 }
-// Required import for delay in dummy API
-import { delay } from "rxjs/operators";
 ```
 
-**In this Angular Example:**
+**How it works:**
 
-1.  `debounceTime(300)` ensures that we don't react to every keystroke. The pipeline only continues after the user has paused typing for 300ms.
-2.  `distinctUntilChanged()` works well after `debounceTime` to prevent searching for the exact same term multiple times if the user pauses, types something, then deletes it back to the original term before pausing again.
-3.  `tap()` allows us to update the `isLoading` state before (`true`) and after (`false`) the API call logic initiated by `switchMap`.
-4.  `switchMap()` handles the asynchronous API call. Crucially, combined with `debounceTime`, it ensures that only the request for the _latest_ stable search term is executed, and any previous pending requests for older terms are cancelled.
-5.  `takeUntilDestroyed` handles unsubscription automatically.
+1. `debounceTime(300)` holds back keystrokes until the user pauses for 300ms, then emits only the latest value.
+2. `distinctUntilChanged()` skips the request when the settled text is the same as last time (type, delete, retype).
+3. `switchMap` fires the request for the settled term and cancels a stale in-flight request if the user resumes typing.
+4. `toSignal` subscribes once, feeds the template, and cleans up on destroy.
 
 Using `debounceTime` here dramatically improves user experience and reduces unnecessary load on backend services.
+
+## Common Mistakes
+
+**Confusing debounce with throttle.** During continuous activity (holding a key, dragging), `debounceTime` emits nothing until the activity stops. If you need regular updates while the stream is active, throttling or sampling is the right family, not debouncing.
+
+**Debouncing after the work instead of before.** `switchMap(fetch)` followed by `debounceTime` still fires a request per keystroke and merely delays the display. The debounce must come **before** the expensive operation.
+
+**Extreme durations.** Below ~150ms a debounce barely coalesces keystrokes; above ~500ms the UI feels laggy. For typical typeahead inputs, 200-400ms is the working range.
+
+## Interview Q&A
+
+??? question "What is the difference between debounceTime and throttleTime?"
+
+    `debounceTime` waits for a pause and emits the last value after silence; during constant activity it emits nothing. `throttleTime` emits a value, then enforces a cooldown during which emissions are ignored; it produces output at a steady maximum rate even while the source stays busy. Typing wants debounce; scroll/mousemove handlers usually want throttle.
+
+??? question "Why does distinctUntilChanged usually come right after debounceTime?"
+
+    Debouncing can settle on the same value twice in a row (type "cat", delete, retype "cat"). `distinctUntilChanged` drops that duplicate so no redundant request fires. Before the debounce it would compare raw keystrokes instead of settled values and achieve little.
+
+??? question "What happens to the values emitted during the quiet-period timer?"
+
+    Each new value replaces the pending one and restarts the timer; the replaced values are discarded permanently. `debounceTime` is lossy by design, which is exactly why it fits "only the final intent matters" inputs.
+
+## Related
+
+- [distinctUntilChanged](distinctUntilChanged.md), its standard companion in search pipelines
+- [switchMap](../transformation/switchMap.md) for cancelling the stale requests the debounce did not prevent
+- [filter](filter.md) for predicate-based (rather than time-based) filtering

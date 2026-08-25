@@ -19,6 +19,13 @@ The `find` operator searches through the sequence of values emitted by a source 
     - `find` emits `undefined`.
     - It then completes.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `find(predicate: (value, index) => boolean)`
+    - **Use when:** you want the first match and then to stop listening, and "no match" is a normal outcome
+    - **Avoid when:** you need every match (`filter`) or a missing match should be an error (`first(predicate)`)
+    - **Top gotcha:** on a source that completes without a match, `find` emits `undefined`, so the output type is `T | undefined`
+
 ## Analogy
 
 Imagine you're watching items pass by on a **conveyor belt** (the source Observable). You're looking for a specific item, say, the **first red ball**.
@@ -37,6 +44,18 @@ Imagine you're watching items pass by on a **conveyor belt** (the source Observa
 - **Predicate Function:** The core logic lives in the function you provide to test each value.
 - **vs `filter`:** Don't confuse `find` with `filter`. `filter` lets _all_ values that match the predicate pass through, while `find` only lets the _first_ one through and then stops.
 
+## Minimal Example
+
+```typescript
+import { from, find } from "rxjs";
+
+from([3, 7, 10, 4, 12])
+  .pipe(find((n) => n > 9))
+  .subscribe(console.log);
+
+// 10   (4 and 12 are never inspected; the stream completes at the match)
+```
+
 ## Real-World Example: Finding the First Admin User in a Stream
 
 Suppose you have a stream of user objects being emitted (perhaps from a WebSocket or paginated API results). You want to find the very first user object that has administrative privileges and then stop processing.
@@ -47,8 +66,7 @@ Suppose you have a stream of user objects being emitted (perhaps from a WebSocke
 
 ```typescript
 import { Injectable } from "@angular/core";
-import { Observable, from, timer } from "rxjs";
-import { concatMap, delay, tap } from "rxjs/operators"; // Use concatMap for sequential emission with delay
+import { Observable, from, timer, concatMap, map, tap } from "rxjs";
 
 export interface User {
   id: number;
@@ -75,15 +93,10 @@ export class UserStreamService {
     return from(users).pipe(
       concatMap((user) =>
         timer(500).pipe(
-          // Wait 500ms before emitting next user
-          tap(() => console.log(` -> Emitting user: ${user.name}`)),
-          switchMap(() => of(user)), // Emit the user after the delay
+          map(() => user), // emit the user after the delay
+          tap((u) => console.log(` -> Emitting user: ${u.name}`)),
         ),
       ),
-      // This simpler version emits immediately, find still works:
-      // return from(users).pipe(
-      //  tap(user => console.log(` -> Emitting user: ${user.name}`))
-      // );
     );
   }
 }
@@ -100,15 +113,14 @@ import {
   OnInit,
   DestroyRef,
 } from "@angular/core";
-import { CommonModule } from "@angular/common"; // For @if and json pipe
+import { JsonPipe } from "@angular/common"; // for the json pipe
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { UserStreamService, User } from "./user-stream.service"; // Adjust path
-import { find, tap } from "rxjs/operators";
+import { find, tap } from "rxjs";
 
 @Component({
   selector: "app-find-admin",
-  standalone: true,
-  imports: [CommonModule],
+  imports: [JsonPipe],
   template: `
     <div>
       <h4>Find Operator Example</h4>
@@ -202,3 +214,31 @@ export class FindAdminComponent implements OnInit {
 5.  The `complete` handler runs immediately after `next`, logging that the `find` operation is done.
 
 If you were to change the `users` array in the service so no user has `isAdmin: true`, the `getUsers` stream would emit all users and then complete. `find` would never find a match, so it would emit `undefined` when its source completes. The `next` handler would receive `undefined`, the UI would show the "not found" message, and `complete` would run.
+
+## Common Mistakes
+
+**Forgetting the `undefined` branch.** The output type is `T | undefined`; skipping the no-match handling produces template errors or silent blank states exactly when the data is unusual.
+
+**Using `find` when you meant `filter`.** `find` unsubscribes after the first match; if matches keep arriving and you want them all, that early completion becomes a confusing "my stream stopped" bug.
+
+**Relying on `find` to finish on a non-completing source.** With no match and no completion (a `Subject`, `fromEvent`), `find` stays subscribed forever. Bound the wait with `takeUntil` or a timeout when the source may never satisfy the predicate.
+
+## Interview Q&A
+
+??? question "How does find differ from first(predicate)?"
+
+    Behavior on "no match before completion": `find` emits `undefined` and completes normally; `first(predicate)` errors with `EmptyError` (unless given a default). Choose by whether absence is normal data or an exceptional condition.
+
+??? question "How does find differ from filter?"
+
+    `filter` is a gate that stays open for every matching value and never ends the stream itself. `find` is a search that emits the first match and immediately completes, unsubscribing from the source.
+
+??? question "Is there an operator that gives the position instead of the value?"
+
+    Yes, `findIndex(predicate)` emits the zero-based index of the first matching emission and completes, or `-1` if the source completes without a match.
+
+## Related
+
+- [filter](filter.md) to keep every match
+- [first](first.md) for error-on-absence semantics
+- [take](take.md) for count-based early completion

@@ -15,12 +15,34 @@ It can be used in a few ways:
 2.  **`first(predicateFn)`:** Emits the first value from the source for which the provided `predicateFn` function returns `true`, then completes. If the source completes before any value satisfies the predicate, `first()` will emit an `EmptyError`.
 3.  **`first(predicateFn, defaultValue)`:** Same as above, but if the source completes before any value satisfies the predicate, it emits the provided `defaultValue` instead of erroring, and then completes.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `first(predicate?, defaultValue?)`
+    - **Use when:** you need exactly one leading value and a missing value is an error worth surfacing
+    - **Avoid when:** an empty source is normal; use `take(1)` or pass a `defaultValue`
+    - **Top gotcha:** `first()` errors with `EmptyError` if the source completes without a qualifying value
+
 ## Key Characteristics
 
 - **Selects First Value:** Emits only one value – the first that qualifies based on the arguments.
 - **Completes Stream:** Immediately completes after emitting the single value (or default value/error).
 - **Unsubscribes from Source:** Cleans up the source subscription upon completion or error.
 - **Potential Error:** Can throw `EmptyError` if no suitable value is found before the source completes (unless a `defaultValue` is supplied).
+
+## Minimal Example
+
+```typescript
+import { from, first } from "rxjs";
+
+from([5, 12, 8, 30])
+  .pipe(first((n) => n > 10))
+  .subscribe({
+    next: console.log,
+    complete: () => console.log("done"),
+  });
+
+// 12, done   (8 and 30 are never inspected; the source is unsubscribed)
+```
 
 ## Real-World Example Scenario
 
@@ -46,8 +68,6 @@ import { EmptyError } from "rxjs";
 
 @Component({
   selector: "app-first-demo",
-  standalone: true,
-  imports: [],
   template: `
     <h4>First Operator Demo</h4>
     <p>Looking for the first 'active' status. Check console.</p>
@@ -123,6 +143,34 @@ export class FirstDemoComponent implements OnInit {
 4.  **`subscribe({...})`**:
     - The `next` handler receives the single value 'active'.
     - The `complete` handler is called right after `next`, confirming the stream finished.
+
+## Common Mistakes
+
+**Ignoring `EmptyError`.** Any `first()` on a source that might complete empty (a filtered stream, a cancelled dialog) needs `catchError`, a `defaultValue`, or a deliberate switch to `take(1)`.
+
+**Using `first()` as a snapshot of a plain Subject.** A `Subject` has no stored value, so `first()` waits for the next emission, possibly forever, and holds the subscription open. Snapshots need `BehaviorSubject` or a signal.
+
+**Reaching for `first(predicate)` when you keep needing later matches.** `first` completes after one match; recurring matches are `filter`'s job.
+
+## Interview Q&A
+
+??? question "What is the difference between first() and take(1)?"
+
+    On a source that emits, they behave identically. On a source that completes empty, `take(1)` completes silently while `first()` errors with `EmptyError`. `first` also accepts a predicate and a default value; `take` does not.
+
+??? question "How do you use first with a condition safely?"
+
+    `first(predicate, defaultValue)`: if the source completes before a match, the default is emitted instead of an error. Without a sensible default, handle `EmptyError` explicitly in `catchError`.
+
+??? question "How would you express first(predicate) with other operators?"
+
+    `filter(predicate)` + `take(1)` + `throwIfEmpty()` is the near-exact expansion. Knowing that composition shows you understand the operator rather than just its name.
+
+## Related
+
+- [take](take.md) for count-based limiting without the empty-source error
+- [find](find.md), which emits `undefined` instead of erroring when nothing matches
+- [last](last.md), the completion-time mirror image
 
 ## Summary
 

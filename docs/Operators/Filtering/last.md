@@ -15,12 +15,29 @@ It operates similarly to `first()` but focuses on the end of the stream:
 2.  **`last(predicateFn)`:** Waits for the source Observable to complete. Once completed, it looks at all the values the source emitted and finds the last one for which the `predicateFn` returned `true`. It emits that single value. If no value satisfied the predicate before completion, `last()` emits an `EmptyError`.
 3.  **`last(predicateFn, defaultValue)`:** Same as above, but if no value satisfied the predicate before completion, it emits the `defaultValue` instead of erroring.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `last(predicate?, defaultValue?)`
+    - **Use when:** you need the final (matching) value of a stream that definitely completes
+    - **Avoid when:** the source never completes; `last` would wait forever and emit nothing
+    - **Top gotcha:** nothing is emitted until the source completes, and an empty source raises `EmptyError`
+
 ## Key Characteristics
 
 - **Waits for Completion:** Critically depends on the source Observable sending a `complete` notification before it can emit a value. It won't work on streams that never complete (like a raw `interval`).
 - **Selects Last Value:** Emits only one value – the last that qualifies based on the arguments, determined _after_ the source finishes.
 - **Completes Stream:** Completes itself immediately after emitting the single value (or default value/error).
 - **Potential Error:** Can throw `EmptyError` if the source completes without emitting suitable values (unless a `defaultValue` is supplied).
+
+## Minimal Example
+
+```typescript
+import { of, last } from "rxjs";
+
+of(10, 50, 20, 100).pipe(last()).subscribe(console.log);
+
+// 100   (emitted only once the source completes)
+```
 
 ## Real-World Example Scenario
 
@@ -37,8 +54,6 @@ import { EmptyError } from "rxjs";
 
 @Component({
   selector: "app-last-demo",
-  standalone: true,
-  imports: [],
   template: `
     <h4>Last Operator Demo</h4>
     <p>Getting the final score from a completed round. Check console.</p>
@@ -101,6 +116,34 @@ export class LastDemoComponent implements OnInit {
 5.  **`subscribe({...})`**:
     - The `next` handler receives the single value `100`.
     - The `complete` handler is called right after `next`, confirming the stream finished.
+
+## Common Mistakes
+
+**Applying `last()` to a stream that never completes.** On an `interval`, a `Subject`, or `valueChanges`, `last` waits forever: no emission, no completion, a live subscription. If you want "latest value so far", you want a `BehaviorSubject`, a signal, or simply the ongoing subscription.
+
+**Forgetting the `EmptyError` path.** Like `first`, an empty completed source errors unless you pass a `defaultValue`.
+
+**Using `last` for the tail of N values.** `last` emits exactly one value; the final N values of a completing stream is `takeLast(N)`.
+
+## Interview Q&A
+
+??? question "Why does last() require completion?"
+
+    Until the source completes, any value could still be followed by another, so "the last value" is undefined. `last` tracks the most recent (matching) value and can only emit it when the source signals it is done.
+
+??? question "What is the difference between last() and takeLast(1)?"
+
+    Both wait for completion and emit the final value. On an **empty** source, `last()` errors with `EmptyError` while `takeLast(1)` completes silently, the same relationship `first()` has with `take(1)`.
+
+??? question "When is last(predicate) useful in practice?"
+
+    For finite batch-style streams: the last successful step in a completed job, the final valid reading in a closed session, the last passing entry in a processed file. In UI streams that never complete, it is almost always the wrong tool.
+
+## Related
+
+- [first](first.md), the mirror image at the start of the stream
+- [take](take.md) and [takeUntil](takeUntil.md) for bounding streams so they can complete
+- [filter](filter.md) for matching without waiting for completion
 
 ## Summary
 

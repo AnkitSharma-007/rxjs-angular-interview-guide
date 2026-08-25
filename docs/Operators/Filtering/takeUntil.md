@@ -7,14 +7,21 @@ tags:
 
 # takeUntil
 
-`takeUntil()` is an RxJS operator primarily used for managing the lifetime of an Observable stream, effectively acting as a **completion operator**. It mirrors the source Observable, allowing its values to pass through, **until** a second Observable, called the `notifier`, emits its first value or completes.
+`takeUntil()` is an RxJS operator primarily used for managing the lifetime of an Observable stream, effectively acting as a **completion operator**. It mirrors the source Observable, allowing its values to pass through, **until** a second Observable, called the `notifier`, emits its first value.
 
-As soon as the `notifier` Observable emits _any_ value or completes, `takeUntil()` immediately:
+As soon as the `notifier` Observable emits _any_ value, `takeUntil()` immediately:
 
 1.  Sends a `complete` notification for the stream it's operating on.
 2.  Unsubscribes from both the source Observable and the `notifier` Observable.
 
-The actual value emitted by the `notifier` doesn't matter; `takeUntil` only cares about the _event_ of an emission (or completion) from the `notifier`.
+The actual value emitted by the `notifier` doesn't matter; `takeUntil` only cares about the _event_ of an emission. **A notifier that completes without ever emitting does nothing**: the source stream keeps running, which is why the classic pattern calls `next()` and not just `complete()`.
+
+!!! abstract "At a glance"
+
+    - **Signature:** `takeUntil(notifier$)`
+    - **Use when:** a stream must end on an external signal: component destroy, logout, cancel button
+    - **Avoid when:** `takeUntilDestroyed()` covers the case with less boilerplate in Angular components
+    - **Top gotcha:** keep `takeUntil` as the **last** operator in the pipe; operators added after it can outlive the notification
 
 ## Key Characteristics
 
@@ -22,6 +29,24 @@ The actual value emitted by the `notifier` doesn't matter; `takeUntil` only care
 - **Takes a Notifier Observable:** You provide the Observable that signals when to stop: `takeUntil(notifier$)`.
 - **Passes Source Values:** Emits values from the source until the notification occurs.
 - **Automatic Unsubscription:** Handles cleanup by unsubscribing from both streams upon completion.
+
+## Minimal Example
+
+```typescript
+import { interval, Subject, takeUntil } from "rxjs";
+
+const stop$ = new Subject<void>();
+
+interval(500).pipe(takeUntil(stop$)).subscribe(console.log);
+
+setTimeout(() => stop$.next(), 1800); // signal after ~3 emissions
+
+// 0, 1, 2, then the stream completes and unsubscribes
+```
+
+!!! tip "Prefer takeUntilDestroyed in Angular components"
+
+    Angular's `takeUntilDestroyed()` from `@angular/core/rxjs-interop` implements exactly this pattern tied to the component's `DestroyRef`, with no manual Subject or `ngOnDestroy`. Interviewers still expect you to know the classic `destroy$` pattern below, so learn both.
 
 ## Real-World Example Scenario
 
@@ -37,8 +62,6 @@ import { Subject, interval, takeUntil, tap } from "rxjs";
 
 @Component({
   selector: "app-take-until-demo",
-  standalone: true,
-  imports: [],
   template: `
     <h4>TakeUntil Demo</h4>
     <p>Timer running (check console). It stops when component is destroyed.</p>
@@ -91,6 +114,34 @@ export class TakeUntilDemoComponent implements OnInit, OnDestroy {
     - **`this.destroy$.next()`**: We emit a dummy value (`void`) from our `destroy$` Subject.
     - **`this.destroy$.complete()`**: It's good practice to also complete the Subject.
 6.  **Behavior**: As soon as `this.destroy$.next()` is called in `ngOnDestroy`, the `takeUntil(this.destroy$)` operator detects this emission. It immediately completes the `interval` stream (triggering the `complete` handler in the subscription) and unsubscribes from `interval`. No more values will be processed, and the interval timer stops, preventing a memory leak.
+
+## Common Mistakes
+
+**Putting `takeUntil` in the middle of the pipe.** Operators after it (especially `switchMap` or `shareReplay`) create inner subscriptions the notifier does not govern, so work keeps running after "completion". The lint-friendly rule: `takeUntil` goes last.
+
+**Calling only `destroy$.complete()`.** Completion of the notifier without an emission does **not** stop the source. The pattern is `this.destroy$.next()` (stop signal) followed by `this.destroy$.complete()` (cleanup of the Subject itself).
+
+**Hand-rolling the pattern where `takeUntilDestroyed` suffices.** In components and directives, the interop helper removes the Subject, the `OnDestroy` interface, and two lifecycle lines, and it cannot be forgotten on new subscriptions added later.
+
+## Interview Q&A
+
+??? question "Why should takeUntil be the last operator in a pipe?"
+
+    Because it completes only the chain **up to that point**. A `switchMap` placed after `takeUntil` can hold a live inner subscription when the notifier fires, leaking the very work the pattern was meant to stop. Placing `takeUntil` last guarantees the whole chain tears down together.
+
+??? question "What happens if the notifier completes without emitting?"
+
+    Nothing. `takeUntil` reacts only to an emission from the notifier. This is a classic bug: a `destroy$` where someone calls `complete()` but never `next()` silently leaves every subscription running.
+
+??? question "How does takeUntilDestroyed relate to takeUntil?"
+
+    It is the same completion mechanism wired to Angular's `DestroyRef` instead of a manual Subject: called in an injection context (or given a `DestroyRef` explicitly), it completes the stream when the component, directive, or service scope is destroyed.
+
+## Related
+
+- [take](take.md) and [first](first.md) for count-based completion
+- [Async Pipe](../../angular/async-pipe.md), which avoids manual subscriptions entirely
+- [Hot Observables](../../learn/hot-observables.md) for why long-lived streams leak without completion
 
 ## Summary
 

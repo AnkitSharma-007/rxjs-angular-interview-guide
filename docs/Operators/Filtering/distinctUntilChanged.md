@@ -16,6 +16,13 @@ It works by remembering the most recent value it emitted. When a new value arriv
 
 By default, it uses strict equality (`===`) for comparison. You can optionally provide your own comparison function if you need custom logic (e.g., comparing specific properties of objects). The very first value emitted by the source always passes through, as there's nothing previous to compare it against.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `distinctUntilChanged(comparator?)` or `distinctUntilChanged(comparator, keySelector)`
+    - **Use when:** downstream work should run only when a value actually changes: form values, state selectors
+    - **Avoid when:** you need global uniqueness across the whole stream (that is `distinct`)
+    - **Top gotcha:** the default check is `===`; two objects with identical content are still "different"
+
 ## Key Characteristics
 
 - **Filters Consecutive Duplicates:** Only emits a value if it's different from the immediately preceding emission.
@@ -23,6 +30,17 @@ By default, it uses strict equality (`===`) for comparison. You can optionally p
 - **Stateful:** It needs to keep track of the last emitted value.
 - **Passes First Value:** The first emission always gets through.
 - **Passes Errors/Completion:** Doesn't interfere with error or completion notifications.
+
+## Minimal Example
+
+```typescript
+import { from, distinctUntilChanged } from "rxjs";
+
+from([1, 1, 2, 2, 2, 1, 3]).pipe(distinctUntilChanged()).subscribe(console.log);
+
+// 1, 2, 1, 3
+// only CONSECUTIVE duplicates are dropped: the second run of 1 still passes
+```
 
 ## Real-World Example: Optimizing User Input Handling
 
@@ -35,94 +53,85 @@ If fetching search results is an expensive operation (network request, database 
 ## Code Snippet
 
 ```typescript
-import { Component, OnInit, OnDestroy } from "@angular/core";
+import { Component, signal } from "@angular/core";
 import { FormControl, ReactiveFormsModule } from "@angular/forms";
-import { Subscription } from "rxjs";
-import { map, debounceTime, distinctUntilChanged, tap } from "rxjs/operators";
-import { CommonModule } from "@angular/common";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { debounceTime, distinctUntilChanged, map } from "rxjs";
 
 @Component({
-  selector: "app-distinct-search-reactive",
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  selector: "app-distinct-search",
+  imports: [ReactiveFormsModule],
   template: `
-    <h4>Distinct Search Input Demo (Reactive Forms)</h4>
-    <p>Time: {{ currentTime }}</p>
-    <p>
-      Uses FormControl.valueChanges. Filters out consecutive duplicate search
-      terms after debounce. Check console.
-    </p>
     <input
-      [formControl]="searchInputControl"
+      [formControl]="searchControl"
       type="text"
-      class="form-control"
       placeholder="Type here..."
     />
-    <div class="mt-2">
-      <h6>Search triggered for:</h6>
-      <ul class="list-group">
-        <li *ngFor="let term of searchLog" class="list-group-item small">
-          {{ term }}
-        </li>
-      </ul>
-    </div>
+    <h6>Search triggered for:</h6>
+    <ul>
+      @for (term of searchLog(); track $index) {
+        <li>{{ term }}</li>
+      }
+    </ul>
   `,
 })
-export class DistinctSearchReactiveComponent implements OnInit, OnDestroy {
-  searchInputControl = new FormControl("");
-  searchLog: string[] = [];
-  currentTime: string = new Date().toLocaleTimeString();
-  private inputSubscription: Subscription | undefined;
+export class DistinctSearchComponent {
+  protected readonly searchControl = new FormControl("", {
+    nonNullable: true,
+  });
+  protected readonly searchLog = signal<string[]>([]);
 
-  ngOnInit(): void {
-    this.inputSubscription = this.searchInputControl.valueChanges
+  constructor() {
+    this.searchControl.valueChanges
       .pipe(
-        tap((value) => {
-          this.currentTime = new Date().toLocaleTimeString();
-          console.log(`[${this.currentTime}] Raw valueChange: "${value}"`);
-        }),
         debounceTime(400),
-        map((value) => (typeof value === "string" ? value.trim() : "")),
-        tap((value) => {
-          this.currentTime = new Date().toLocaleTimeString();
-          console.log(`  [${this.currentTime}] Debounced: "${value}"`);
-        }),
-        distinctUntilChanged(),
-        tap((value) => {
-          this.currentTime = new Date().toLocaleTimeString();
-          console.log(
-            `    [${this.currentTime}] Distinct: "${value}" -> Triggering Search!`,
-          );
-        }),
+        map((value) => value.trim()),
+        distinctUntilChanged(), // same settled term twice -> only one search
+        takeUntilDestroyed(),
       )
-      .subscribe({
-        next: (searchTerm) => {
-          const termStr = searchTerm ?? "";
-          this.searchLog.push(
-            `[${new Date().toLocaleTimeString()}] "${termStr}"`,
-          );
-          if (this.searchLog.length > 10) this.searchLog.shift();
-          // API call placeholder
-        },
-        error: (err) => console.error("Input stream error:", err),
+      .subscribe((term) => {
+        this.searchLog.update((log) => [...log.slice(-9), term]);
+        // trigger the actual search here
       });
-  }
-
-  ngOnDestroy(): void {
-    this.inputSubscription?.unsubscribe();
-    console.log("Search input subscription stopped.");
   }
 }
 ```
 
 ## Explanation
 
-1.  **`fromEvent(..., 'input')`**: Creates a stream of input events.
-2.  **`map(...)`**: Extracts the text value from each event.
-3.  **`debounceTime(400)`**: Waits for a 400ms pause in typing before passing the latest value. This helps prevent excessive processing during rapid typing.
-4.  **`distinctUntilChanged()`**: This is the crucial step. It receives the debounced value. It compares this value to the _last value that it allowed through_. If the current debounced value is identical to the previous one (e.g., user paused, typed the same letter again, paused), `distinctUntilChanged` filters it out. Only if the debounced value has actually changed since the last emission will it pass through.
-5.  **`tap(...)` after distinctUntilChanged**: The logging here only happens for values that are truly distinct _after_ debouncing.
-6.  **`subscribe({...})`**: The `next` handler, which would typically trigger the expensive search operation, is only called when `distinctUntilChanged` allows a value through, thus avoiding redundant searches for the same term.
+1.  **`valueChanges`**: Emits the control's value on every keystroke.
+2.  **`debounceTime(400)`**: Waits for a 400ms pause in typing before passing the latest value.
+3.  **`map(...)`**: Trims whitespace so " cat" and "cat" compare as equal.
+4.  **`distinctUntilChanged()`**: Compares the settled value with the last one it let through. If the user pauses, types, then deletes back to the same term, the duplicate is filtered out and no redundant search fires.
+5.  **`takeUntilDestroyed()`**: Ends the subscription with the component.
+
+## Common Mistakes
+
+**Comparing objects by reference.** `{ id: 1 } !== { id: 1 }`, so an object stream is never filtered by the default check. Provide a comparator, `distinctUntilChanged((a, b) => a.id === b.id)`, or use `distinctUntilKeyChanged("id")`.
+
+**Expecting global de-duplication.** Only consecutive repeats are dropped; `1, 2, 1` passes through untouched. Removing all duplicates ever seen is `distinct`, which also means unbounded memory for the seen-set.
+
+**Placing it before `debounceTime`.** Before the debounce it compares raw keystrokes, which almost always differ. After the debounce it compares settled values, which is what prevents redundant requests.
+
+## Interview Q&A
+
+??? question "Why does distinctUntilChanged not filter my stream of objects?"
+
+    Because the default comparison is `===`, which compares references. Each new object literal is a new reference. Fix it with a custom comparator or a key selector so comparison happens on content.
+
+??? question "What is the difference between distinct and distinctUntilChanged?"
+
+    `distinctUntilChanged` remembers only the previous emission and drops consecutive repeats. `distinct` remembers every value ever emitted and drops any repeat, at the cost of a growing internal set. For change detection on streams, `distinctUntilChanged` is almost always what you want.
+
+??? question "Where does distinctUntilChanged belong in a typeahead pipeline?"
+
+    After `debounceTime` and any normalization (`map` to trim/lowercase), and before the request operator (`switchMap`). That order means you compare final, normalized terms and skip duplicate requests.
+
+## Related
+
+- [debounceTime](debounceTime.md), its usual upstream partner
+- [filter](filter.md) for predicate-based filtering
+- [switchMap](../transformation/switchMap.md), the typical next step in search pipelines
 
 ## Summary
 
