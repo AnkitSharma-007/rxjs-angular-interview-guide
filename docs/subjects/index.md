@@ -16,6 +16,7 @@ A `Subject` is both an Observable and an Observer: you can push values into it w
 | [`Subject`](subject.md)                 | Only values emitted after subscribing | Event buses, one-off notifications                         |
 | [`BehaviorSubject`](behaviorSubject.md) | The current value, then updates       | State that always has a value (auth status, selected item) |
 | [`ReplaySubject`](replaySubject.md)     | The last N values, then updates       | Late subscribers that need recent history                  |
+| [`AsyncSubject`](asyncSubject.md)       | Only the final value, at completion   | One-shot results shared with all consumers (rare)          |
 
 Not sure which one fits? See the [Subject vs BehaviorSubject vs ReplaySubject comparison](../comparisons/subject-behaviorSubject-replaySubject.md).
 

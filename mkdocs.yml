@@ -15,8 +15,11 @@ nav:
       - learn/index.md
       - "Observable": learn/observable.md
       - "Observer": learn/observer.md
+      - "Subscription & Teardown": learn/subscription.md
+      - "The Observable Contract": learn/observable-contract.md
       - "Cold Observables": learn/cold-observables.md
       - "Hot Observables": learn/hot-observables.md
+      - "Unicast vs Multicast": learn/unicast-vs-multicast.md
       - "Promise vs Observable": learn/promise-vs-observable.md
   - Operators:
       - operators/index.md
@@ -70,6 +73,7 @@ nav:
       - "Subject": subjects/subject.md
       - "BehaviorSubject": subjects/behaviorSubject.md
       - "ReplaySubject": subjects/replaySubject.md
+      - "AsyncSubject": subjects/asyncSubject.md
       - "share": subjects/share.md
       - "shareReplay": subjects/shareReplay.md
   - "Angular + RxJS":
