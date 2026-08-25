@@ -1,7 +1,65 @@
-# RxJS Angular interview guide
+---
+description: "An open-source RxJS interview guide for Angular developers: fundamentals, operators, Subjects, and comparisons with real Angular examples."
+---
 
-Ready to take your Angular skills to the next level? Welcome to the ultimate **RxJS interview guide** designed for Angular developers like you! Whether you're preparing for your next job interview or simply want to deepen your understanding of **reactive programming** in Angular, this guide has you covered. Explore **real-world RxJS examples**, **clear explanations**, and **detailed interview questions and answers** that will give you the edge over other candidates.
+# RxJS Angular Interview Guide
 
-Learn how to use **RxJS operators** effectively in Angular applications, understand best practices, and discover expert tips that will help you tackle even the toughest interview challenges. With this guide, you’ll not only master the intricacies of RxJS but also develop a deeper understanding of how to apply these concepts to real-world scenarios.
+Master RxJS for Angular interviews: clear explanations, realistic Angular examples, and side-by-side comparisons, organized so you can learn the concepts, look up operators fast, and revise before the interview.
 
-Are you ready to **crack your next Angular interview** and become a true expert in reactive programming? Let’s dive in!
+## Where do you want to start?
+
+<div class="grid cards" markdown>
+
+- :material-school:{ .lg .middle } **New to RxJS?**
+
+  ***
+
+  Build the mental model first: what Observables are, how they behave, and how they differ from Promises.
+
+  [:octicons-arrow-right-24: Start with the fundamentals](learn/index.md)
+
+- :material-tools:{ .lg .middle } **Master the operators**
+
+  ***
+
+  Creation, transformation, filtering, combination, error handling, and utility operators with practical Angular examples.
+
+  [:octicons-arrow-right-24: Browse operators](operators/index.md)
+
+- :material-broadcast:{ .lg .middle } **Subjects & multicasting**
+
+  ***
+
+  Subject, BehaviorSubject, ReplaySubject, `share`, and `shareReplay`: how to share one stream with many consumers.
+
+  [:octicons-arrow-right-24: Understand Subjects](subjects/index.md)
+
+- :material-compare-horizontal:{ .lg .middle } **Compare & revise**
+
+  ***
+
+  The comparisons interviewers love to ask about, condensed into decision tables you can review in minutes.
+
+  [:octicons-arrow-right-24: See comparisons](comparisons/index.md)
+
+- :material-angular:{ .lg .middle } **RxJS in Angular**
+
+  ***
+
+  Signals interop, HTTP patterns, forms, router, caching, memory leaks, and the anti-patterns to avoid.
+
+  [:octicons-arrow-right-24: Read the Angular guides](angular/index.md)
+
+- :material-account-question:{ .lg .middle } **Interview prep**
+
+  ***
+
+  Graded questions with answers, an all-in-one cheat sheet, and a 60-minute revision plan for the final hour.
+
+  [:octicons-arrow-right-24: Start prepping](interview-prep/index.md)
+
+</div>
+
+## RxJS through an Angular lens
+
+Every topic here is explained with real Angular usage: `HttpClient` calls, reactive forms, the `async` pipe, and subscription cleanup with `takeUntilDestroyed`. Interview tomorrow? Go straight to the [60-Minute Revision](interview-prep/sixty-minute-revision.md).

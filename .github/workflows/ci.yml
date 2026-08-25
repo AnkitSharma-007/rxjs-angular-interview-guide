@@ -24,5 +24,7 @@ jobs:
           path: .cache
           restore-keys: |
             mkdocs-material-
-      - run: pip install mkdocs-material
+      - name: Install social card dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev
+      - run: pip install "mkdocs-material[imaging]" mkdocs-redirects
       - run: mkdocs gh-deploy --force

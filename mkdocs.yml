@@ -1,70 +1,114 @@
 # Project information
 site_name: RxJS Angular interview guide
+site_url: https://ankitsharma-007.github.io/rxjs-angular-interview-guide/
 site_description: A comprehensive, open-source RxJS interview guide tailored for Angular developers. Includes real-world questions, detailed answers, and code examples to help you ace your next interview.
 site_author: Ankit Sharma
 
 # Repository
-repo_name: "RxJS Angular interview guide"
+repo_name: "AnkitSharma-007/rxjs-angular-interview-guide"
 repo_url: "https://github.com/AnkitSharma-007/rxjs-angular-interview-guide"
 
 # Navigation
 nav:
-  - "Home":
-      - index.md
-  - "Overview":
-      - "Observable": observable.md
-      - "Observer": observer.md
-      - "Cold Observables": cold-observables.md
-      - "Hot Observables": hot-observables.md
-      - "Promise Vs Observable": promise-vs-observable.md
-      - "Async pipe": async-pipe.md
-  - "Operators":
-      - "RxJS operators": Operators/RxJS-operators.md
-      - "Combination":
-          - "combineLatest": Operators/Combination/combineLatest.md
-          - "forkJoin": Operators/Combination/forkJoin.md
-          - "zip": Operators/Combination/zip.md
-          - "withLatestFrom": Operators/Combination/withLatestFrom.md
+  - Home: index.md
+  - Learn:
+      - learn/index.md
+      - "Observable": learn/observable.md
+      - "Observer": learn/observer.md
+      - "Subscription & Teardown": learn/subscription.md
+      - "The Observable Contract": learn/observable-contract.md
+      - "Cold Observables": learn/cold-observables.md
+      - "Hot Observables": learn/hot-observables.md
+      - "Unicast vs Multicast": learn/unicast-vs-multicast.md
+      - "Promise vs Observable": learn/promise-vs-observable.md
+      - "Schedulers, observeOn & subscribeOn": learn/schedulers.md
+  - Operators:
+      - operators/index.md
       - "Creation":
-          - "empty VS never": Operators/Creation/empty-never.md
-          - "from": Operators/Creation/from.md
-          - "interval": Operators/Creation/interval.md
-          - "of": Operators/Creation/of.md
-          - "timer": Operators/Creation/timer.md
-      - "Error Handling":
-          - "catchError": Operators/Error/catchError.md
-          - "retry": Operators/Error/retry.md
-          - "retryWhen": Operators/Error/retryWhen.md
-      - "Filtering":
-          - "debounceTime": Operators/Filtering/debounceTime.md
-          - "distinctUntilChanged": Operators/Filtering/distinctUntilChanged.md
-          - "filter": Operators/Filtering/filter.md
-          - "find": Operators/Filtering/find.md
-          - "first": Operators/Filtering/first.md
-          - "last": Operators/Filtering/last.md
-          - "skip": Operators/Filtering/skip.md
-          - "take": Operators/Filtering/take.md
-          - "takeUntil": Operators/Filtering/takeUntil.md
-      - "Multicasting":
-          - "share": Operators/Multicasting/share.md
-          - "shareReplay": Operators/Multicasting/shareReplay.md
-      - "Subjects":
-          - "subject": Operators/Subjects/subject.md
-          - "behaviorSubject": Operators/Subjects/behaviorSubject.md
-          - "replaySubject": Operators/Subjects/replaySubject.md
-          - "Subject Vs BehaviorSubject Vs ReplaySubject": Operators/Subjects/subject-behaviorSubject-replaySubject.md
+          - "of": operators/creation/of.md
+          - "from": operators/creation/from.md
+          - "fromEvent": operators/creation/fromEvent.md
+          - "defer": operators/creation/defer.md
+          - "interval": operators/creation/interval.md
+          - "timer": operators/creation/timer.md
+          - "EMPTY vs NEVER": operators/creation/empty-never.md
       - "Transformation":
-          - "concatMap": Operators/Transformation/concatMap.md
-          - "exhaustMap": Operators/Transformation/exhaustMap.md
-          - "map": Operators/Transformation/map.md
-          - "mergeMap": Operators/Transformation/mergeMap.md
-          - "switchMap": Operators/Transformation/switchMap.md
-          - "switchMap Vs mergeMap Vs concatMap": Operators/Transformation/switchMap-mergeMap-concatMap.md
+          - "map": operators/transformation/map.md
+          - "scan": operators/transformation/scan.md
+          - "reduce": operators/transformation/reduce.md
+          - "switchMap": operators/transformation/switchMap.md
+          - "mergeMap": operators/transformation/mergeMap.md
+          - "concatMap": operators/transformation/concatMap.md
+          - "exhaustMap": operators/transformation/exhaustMap.md
+          - "pairwise": operators/transformation/pairwise.md
+          - "buffer family": operators/transformation/buffer.md
+      - "Filtering":
+          - "filter": operators/filtering/filter.md
+          - "debounceTime": operators/filtering/debounceTime.md
+          - "throttleTime": operators/filtering/throttleTime.md
+          - "auditTime": operators/filtering/auditTime.md
+          - "sampleTime": operators/filtering/sampleTime.md
+          - "distinctUntilChanged": operators/filtering/distinctUntilChanged.md
+          - "take": operators/filtering/take.md
+          - "takeUntil": operators/filtering/takeUntil.md
+          - "takeWhile": operators/filtering/takeWhile.md
+          - "first": operators/filtering/first.md
+          - "last": operators/filtering/last.md
+          - "skip": operators/filtering/skip.md
+          - "find": operators/filtering/find.md
+      - "Combination":
+          - "combineLatest": operators/combination/combineLatest.md
+          - "forkJoin": operators/combination/forkJoin.md
+          - "zip": operators/combination/zip.md
+          - "withLatestFrom": operators/combination/withLatestFrom.md
+          - "merge": operators/combination/merge.md
+          - "concat": operators/combination/concat.md
+          - "race": operators/combination/race.md
+          - "startWith": operators/combination/startWith.md
+      - "Error Handling":
+          - "catchError": operators/error-handling/catchError.md
+          - "retry": operators/error-handling/retry.md
+          - "retryWhen": operators/error-handling/retryWhen.md
+          - "throwError": operators/error-handling/throwError.md
       - "Utility":
-          - "delay": Operators/Utility/delay.md
-          - "finalize": Operators/Utility/finalize.md
-          - "tap": Operators/Utility/tap.md
-          - "timeout": Operators/Utility/timeout.md
+          - "tap": operators/utility/tap.md
+          - "delay": operators/utility/delay.md
+          - "finalize": operators/utility/finalize.md
+          - "timeout": operators/utility/timeout.md
+  - "Subjects & Multicasting":
+      - subjects/index.md
+      - "Subject": subjects/subject.md
+      - "BehaviorSubject": subjects/behaviorSubject.md
+      - "ReplaySubject": subjects/replaySubject.md
+      - "AsyncSubject": subjects/asyncSubject.md
+      - "share": subjects/share.md
+      - "shareReplay": subjects/shareReplay.md
+  - "Angular + RxJS":
+      - angular/index.md
+      - "Async Pipe": angular/async-pipe.md
+      - "Signals & RxJS Interop": angular/signals-interop.md
+      - "HttpClient Patterns": angular/http-patterns.md
+      - "Reactive Forms": angular/reactive-forms.md
+      - "Router": angular/router.md
+      - "Interceptors & Retries": angular/interceptors-retry.md
+      - "Caching": angular/caching.md
+      - "Memory Leaks": angular/memory-leaks.md
+      - "RxJS Anti-Patterns": angular/anti-patterns.md
+  - Comparisons:
+      - comparisons/index.md
+      - "switchMap vs mergeMap vs concatMap vs exhaustMap": comparisons/switchMap-mergeMap-concatMap.md
+      - "Subject vs BehaviorSubject vs ReplaySubject": comparisons/subject-behaviorSubject-replaySubject.md
+  - "Interview Prep":
+      - interview-prep/index.md
+      - "Junior Questions": interview-prep/questions-junior.md
+      - "Mid-Level Questions": interview-prep/questions-mid.md
+      - "Senior Questions": interview-prep/questions-senior.md
+      - "Scenarios": interview-prep/scenarios.md
+      - "Coding Challenges": interview-prep/coding-challenges.md
+      - "Common Traps": interview-prep/common-traps.md
+      - "Operator Cheat Sheet": interview-prep/cheat-sheet-operators.md
+      - "60-Minute Revision": interview-prep/sixty-minute-revision.md
+  - Tags: tags.md
 
 # Configuration
 theme:
@@ -74,18 +118,26 @@ theme:
     text: Roboto
     code: Roboto Mono
   logo: assets/Rx_Logo.png
-  favicon: assets/favicon.ico
+  favicon: assets/favicon.png
   palette:
-    # Palette toggle for light mode
-    - scheme: default
+    # Palette toggle for automatic (system preference) mode
+    - media: "(prefers-color-scheme)"
       toggle:
-        icon: material/weather-night
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
         name: Switch to dark mode
 
     # Palette toggle for dark mode
-    - scheme: slate
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
       toggle:
-        icon: material/weather-sunny
+        icon: material/brightness-4
         name: Switch to system preference
   features:
     - navigation.instant
@@ -93,6 +145,68 @@ theme:
     - navigation.footer
     - navigation.indexes
     - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+    - search.share
+
+plugins:
+  - search
+  - tags
+  - privacy # self-host external assets (Google Fonts): faster first paint, no third-party request
+  - social:
+      enabled: !ENV [CI, false] # needs the imaging dependencies; generate cards in CI only
+  - redirects:
+      redirect_maps:
+        observable.md: learn/observable.md
+        observer.md: learn/observer.md
+        cold-observables.md: learn/cold-observables.md
+        hot-observables.md: learn/hot-observables.md
+        promise-vs-observable.md: learn/promise-vs-observable.md
+        async-pipe.md: angular/async-pipe.md
+        Operators/RxJS-operators.md: operators/index.md
+        Operators/Creation/empty-never.md: operators/creation/empty-never.md
+        Operators/Creation/from.md: operators/creation/from.md
+        Operators/Creation/interval.md: operators/creation/interval.md
+        Operators/Creation/of.md: operators/creation/of.md
+        Operators/Creation/timer.md: operators/creation/timer.md
+        Operators/Transformation/concatMap.md: operators/transformation/concatMap.md
+        Operators/Transformation/exhaustMap.md: operators/transformation/exhaustMap.md
+        Operators/Transformation/map.md: operators/transformation/map.md
+        Operators/Transformation/mergeMap.md: operators/transformation/mergeMap.md
+        Operators/Transformation/switchMap.md: operators/transformation/switchMap.md
+        Operators/Transformation/switchMap-mergeMap-concatMap.md: comparisons/switchMap-mergeMap-concatMap.md
+        Operators/Filtering/debounceTime.md: operators/filtering/debounceTime.md
+        Operators/Filtering/distinctUntilChanged.md: operators/filtering/distinctUntilChanged.md
+        Operators/Filtering/filter.md: operators/filtering/filter.md
+        Operators/Filtering/find.md: operators/filtering/find.md
+        Operators/Filtering/first.md: operators/filtering/first.md
+        Operators/Filtering/last.md: operators/filtering/last.md
+        Operators/Filtering/skip.md: operators/filtering/skip.md
+        Operators/Filtering/take.md: operators/filtering/take.md
+        Operators/Filtering/takeUntil.md: operators/filtering/takeUntil.md
+        Operators/Combination/combineLatest.md: operators/combination/combineLatest.md
+        Operators/Combination/forkJoin.md: operators/combination/forkJoin.md
+        Operators/Combination/withLatestFrom.md: operators/combination/withLatestFrom.md
+        Operators/Combination/zip.md: operators/combination/zip.md
+        Operators/Error/catchError.md: operators/error-handling/catchError.md
+        Operators/Error/retry.md: operators/error-handling/retry.md
+        Operators/Error/retryWhen.md: operators/error-handling/retryWhen.md
+        Operators/Multicasting/share.md: subjects/share.md
+        Operators/Multicasting/shareReplay.md: subjects/shareReplay.md
+        Operators/Subjects/subject.md: subjects/subject.md
+        Operators/Subjects/behaviorSubject.md: subjects/behaviorSubject.md
+        Operators/Subjects/replaySubject.md: subjects/replaySubject.md
+        Operators/Subjects/subject-behaviorSubject-replaySubject.md: comparisons/subject-behaviorSubject-replaySubject.md
+        Operators/Utility/delay.md: operators/utility/delay.md
+        Operators/Utility/finalize.md: operators/utility/finalize.md
+        Operators/Utility/tap.md: operators/utility/tap.md
+        Operators/Utility/timeout.md: operators/utility/timeout.md
 
 extra:
   social:
@@ -104,16 +218,30 @@ extra:
 extra_css:
   - stylesheets/extra.css
 
+extra_javascript:
+  - javascripts/a11y.js
+
 # Extensions
 markdown_extensions:
+  - admonition
   - attr_list
-  - codehilite:
-      guess_lang: false
+  - md_in_html
   - footnotes
   - toc:
       permalink: "#"
   - pymdownx.betterem
-  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg

@@ -1,0 +1,13 @@
+# MkDocs build output
+site/
+
+# mkdocs-material privacy/social plugin cache
+.cache/
+
+# Python
+venv/
+.venv/
+__pycache__/
+
+# OS
+.DS_Store
