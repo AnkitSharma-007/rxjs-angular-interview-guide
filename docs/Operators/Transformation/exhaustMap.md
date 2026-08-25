@@ -16,6 +16,13 @@ tags:
 
 Think of it like a busy worker who takes the first task assigned. While working on that task, they completely ignore anyone else trying to give them new tasks. Only when they finish the current task will they accept the _next_ task that comes along. Any tasks attempted while they were busy are lost.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `exhaustMap(project)`
+    - **Use when:** the first trigger wins and repeats should be ignored until it finishes: submit buttons, login, manual refresh
+    - **Avoid when:** every event matters; dropped values are gone forever (use `concatMap` to queue instead)
+    - **Top gotcha:** ignored clicks give no feedback; pair it with a disabled state so users know a request is in flight
+
 ## Key Characteristics
 
 - **Higher-Order Mapping:** Maps values from an outer Observable to inner Observables.
@@ -23,6 +30,30 @@ Think of it like a busy worker who takes the first task assigned. While working 
 - **No Concurrency (Managed):** Only ever handles one inner Observable at a time.
 - **No Cancellation:** It doesn't cancel the active inner Observable; it lets it finish.
 - **Use Cases:** Perfect for situations where you want to execute an action based on the _first_ trigger in a potential burst of triggers, and then ignore all subsequent triggers until that action is fully complete. Common for preventing duplicate actions caused by rapid user input, like double-clicks.
+
+## Minimal Example
+
+```typescript
+import { exhaustMap, interval, map, take } from "rxjs";
+
+interval(500)
+  .pipe(
+    take(4), // source emits 0, 1, 2, 3
+    exhaustMap((n) =>
+      interval(600).pipe(
+        take(2),
+        map((i) => `outer ${n} / inner ${i}`),
+      ),
+    ),
+  )
+  .subscribe(console.log);
+
+// 1 and 2 arrive while the inner stream for 0 is active: DROPPED
+// outer 0 / inner 0
+// outer 0 / inner 1
+// outer 3 / inner 0
+// outer 3 / inner 1
+```
 
 ## Real-World Example Scenario
 
@@ -39,195 +70,85 @@ You want the application to:
 
 `exhaustMap` handles this perfectly.
 
-## Code Snippet (Angular Component - Submit Button)
+## Angular Example
 
 ```typescript
-import { Component, OnDestroy } from "@angular/core";
+import { Component, inject, signal } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { Subject, Subscription, Observable, of, timer } from "rxjs";
-import { exhaustMap, catchError, tap, delay } from "rxjs/operators"; // Import exhaustMap
-
-interface SubmitPayload {
-  formData: any;
-  timestamp: string;
-}
-
-interface SubmitResult {
-  success: boolean;
-  message: string;
-  payloadSent?: SubmitPayload;
-}
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { Subject, catchError, exhaustMap, finalize, of } from "rxjs";
 
 @Component({
   selector: "app-submit-once",
   template: `
-    <h4>Submit Form Demo (Prevents Double Submit)</h4>
-    <p>
-      Rapidly click the "Submit" button. Only the first click while not busy
-      will trigger the action.
-    </p>
-    <button
-      (click)="onSubmitClick()"
-      class="btn btn-success"
-      [disabled]="isSubmitting"
-    >
-      <span
-        *ngIf="isSubmitting"
-        class="spinner-border spinner-border-sm"
-        role="status"
-        aria-hidden="true"
-      ></span>
-      {{ isSubmitting ? " Submitting..." : "Submit Data" }}
+    <button (click)="submits$.next()" [disabled]="submitting()">
+      {{ submitting() ? "Submitting..." : "Submit" }}
     </button>
-
-    <div class="mt-3">
-      <h5>Submission Log:</h5>
-      <ul class="list-group">
-        <li
-          *ngFor="let log of submissionLog"
-          class="list-group-item small"
-          [ngClass]="{
-            'list-group-item-info': log.includes('Ignoring'),
-            'list-group-item-warning': log.includes('Starting'),
-            'list-group-item-success': log.includes('Success'),
-            'list-group-item-danger': log.includes('Failed'),
-          }"
-        >
-          {{ log }}
-        </li>
-      </ul>
-    </div>
+    <p>{{ status() }}</p>
   `,
 })
-export class SubmitOnceComponent implements OnDestroy {
-  submissionLog: string[] = [];
-  isSubmitting = false;
+export class SubmitOnceComponent {
+  private readonly http = inject(HttpClient);
 
-  // Use a Subject to stream click events
-  private submitSubject = new Subject<SubmitPayload>();
-  private submitSubscription: Subscription;
+  protected readonly submits$ = new Subject<void>();
+  protected readonly submitting = signal(false);
+  protected readonly status = signal("");
 
-  constructor(private http: HttpClient) {
-    this.submitSubscription = this.submitSubject
+  constructor() {
+    this.submits$
       .pipe(
-        tap(() => {
-          // This tap happens *before* exhaustMap decides whether to proceed or ignore
-          // Useful for logging the intention, but not the actual start of the API call yet
-          console.log(
-            `[${new Date().toLocaleTimeString()}] Submit detected by Subject.`,
+        // clicks while a save is in flight are IGNORED, not queued
+        exhaustMap(() => {
+          this.submitting.set(true);
+          return this.http.post("/api/orders", {}).pipe(
+            catchError(() => of(null)), // keep the stream alive on failure
+            finalize(() => this.submitting.set(false)),
           );
-          // Note: We don't set isSubmitting = true here yet, only when exhaustMap *starts* the inner observable.
         }),
-        // exhaustMap will ignore emissions from submitSubject if an inner observable is active
-        exhaustMap((payload: SubmitPayload) => {
-          // This inner function only runs if exhaustMap is NOT already busy.
-          this.isSubmitting = true; // Set loading state *now*
-          const startLog = `[${new Date().toLocaleTimeString()}] exhaustMap Starting API Call with payload from ${
-            payload.timestamp
-          }`;
-          console.log(startLog);
-          this.submissionLog.push(startLog);
-
-          // Simulate API call (replace with actual http.post)
-          // Add delay to simulate network time
-          const innerApiCall$ = of({
-            status: "Saved",
-            dataReceived: payload,
-          }).pipe(
-            delay(2500), // Simulate 2.5 second save operation
-          );
-          // const innerApiCall$ = this.http.post<any>('/api/formdata', payload)
-
-          return innerApiCall$.pipe(
-            map((response) => ({
-              success: true,
-              message: `Success: Submitted data from ${
-                payload.timestamp
-              }. Response: ${JSON.stringify(response)}`,
-              payloadSent: payload,
-            })),
-            catchError((error) => {
-              console.error("Submission Error:", error);
-              return of({
-                // Return failure result Observable
-                success: false,
-                message: `Failed: Submission from ${
-                  payload.timestamp
-                }. Error: ${error.message || "Unknown error"}`,
-                payloadSent: payload,
-              });
-            }),
-            tap(() => {
-              this.isSubmitting = false; // Unset loading state when inner observable completes/errors
-              console.log(
-                `[${new Date().toLocaleTimeString()}] exhaustMap finished inner observable. Ready for next event.`,
-              );
-            }), // Final tap ensures isSubmitting is reset
-          ); // End of inner pipe
-        }), // End of exhaustMap
+        takeUntilDestroyed(),
       )
-      .subscribe({
-        next: (result: SubmitResult) => {
-          // Receives the result only when an API call initiated by exhaustMap completes
-          const logMsg = `[${new Date().toLocaleTimeString()}] ${
-            result.message
-          }`;
-          console.log(logMsg);
-          this.submissionLog.push(logMsg);
-        },
-        error: (err) => {
-          // Error in the main submitSubject stream (rare for Subject)
-          const logMsg = `[${new Date().toLocaleTimeString()}] Critical stream error: ${err}`;
-          console.error(logMsg);
-          this.submissionLog.push(logMsg);
-          this.isSubmitting = false;
-        },
-      });
-
-    // Monitor the subject separately to show when clicks are ignored
-    this.submitSubject.subscribe(() => {
-      if (this.isSubmitting) {
-        const ignoreLog = `[${new Date().toLocaleTimeString()}] Ignoring click because submission is already in progress.`;
-        console.warn(ignoreLog);
-        // Optionally push to a different log or provide brief UI feedback
-        this.submissionLog.push(ignoreLog);
-      }
-    });
-  }
-
-  onSubmitClick(): void {
-    // Create payload (e.g., from form values)
-    const payload: SubmitPayload = {
-      formData: { name: "Test User", value: Math.random() },
-      timestamp: new Date().toLocaleTimeString(),
-    };
-    // Push the payload onto the subject stream
-    // exhaustMap will decide whether to process it or ignore it
-    this.submitSubject.next(payload);
-  }
-
-  ngOnDestroy(): void {
-    if (this.submitSubscription) {
-      this.submitSubscription.unsubscribe();
-      console.log("Submit subscription stopped.");
-    }
-    this.submitSubject.complete();
+      .subscribe((result) =>
+        this.status.set(result ? "Order placed" : "Something went wrong"),
+      );
   }
 }
 ```
 
-**Explanation:**
+**How it works:**
 
-1.  **`Subject<SubmitPayload>`**: A Subject (`submitSubject`) streams the payloads whenever the "Submit Data" button is clicked via `onSubmitClick()`.
-2.  **`exhaustMap((payload: SubmitPayload) => ...)`**: This is the key operator.
-    - When `submitSubject.next(payload)` is called, `exhaustMap` receives the `payload`.
-    - It checks if its previous inner Observable (`innerApiCall$`) is still running.
-    - **If NOT running**: It executes the inner function, sets `isSubmitting = true`, logs the start, returns `innerApiCall$`, and subscribes to it.
-    - **If IS running**: It **ignores** the incoming `payload`. The inner function is _not_ executed, no new API call is made, and the `isSubmitting` flag remains true from the ongoing operation. The separate subscription logging demonstrates this ignoring action.
-3.  **`innerApiCall$`**: Represents the actual asynchronous work (simulated `http.post` with a `delay`).
-4.  **Inner `map`, `catchError`, `tap`**: These handle the result of the API call and, importantly, the final `tap` sets `isSubmitting = false` _only when the inner operation completes or errors_. This signals to `exhaustMap` that it's no longer busy and can accept a new event from `submitSubject`.
-5.  **`subscribe({...})`**: Receives the `SubmitResult` only for those clicks that were _not_ ignored by `exhaustMap` and whose corresponding API calls completed.
+1. Every click pushes into the `submits$` Subject.
+2. `exhaustMap` starts the HTTP `POST` for the first click. While that request is in flight, further clicks are **dropped**, not queued and not cancelled into a new request.
+3. `finalize` resets the loading flag on success, error, or unsubscribe, so the button re-enables exactly when `exhaustMap` becomes ready for the next click.
+4. `catchError` on the inner Observable keeps one failed save from killing the whole click stream, and `takeUntilDestroyed()` cleans up with the component.
+
+## Common Mistakes
+
+**Expecting dropped values to run later.** Unlike `concatMap`, there is no queue. A click ignored by `exhaustMap` never produces a request. If every event must be processed, `exhaustMap` is the wrong tool.
+
+**No feedback for ignored clicks.** Users cannot tell the difference between "ignored" and "broken". Disable the button or show a spinner while the inner Observable runs.
+
+**Using switchMap for login.** Pressing Enter twice would cancel the first auth request mid-flight. Login flows are the textbook `exhaustMap` case: let the first attempt finish, ignore the rest.
+
+## Interview Q&A
+
+??? question "A user triple-clicks Save. What happens with exhaustMap, concatMap, switchMap, and mergeMap?"
+
+    `exhaustMap`: one request; clicks two and three are dropped. `concatMap`: three requests, one after another. `switchMap`: three attempts, but requests one and two are cancelled; only the third completes. `mergeMap`: three concurrent requests. This single scenario is the most common higher-order mapping interview question.
+
+??? question "Why is exhaustMap the usual choice for login forms?"
+
+    An in-flight auth request should neither be duplicated (`mergeMap`), queued for replay (`concatMap`), nor cancelled by an impatient second click (`switchMap`). Ignoring repeats until the attempt resolves matches what users expect.
+
+??? question "Does exhaustMap ever cancel its inner Observable?"
+
+    No. It always lets the active inner Observable finish; it only drops incoming source values while busy. Cancellation on new input is `switchMap`'s behavior.
+
+## Related
+
+- [switchMap vs mergeMap vs concatMap](../../comparisons/switchMap-mergeMap-concatMap.md), where exhaustMap is the fourth strategy to mention
+- [concatMap](concatMap.md) to queue events instead of dropping them
+- [switchMap](switchMap.md) to cancel the in-flight operation instead of protecting it
 
 ## Summary
 
-use `exhaustMap` when you want to ensure that an action triggered by an event stream only runs if it's not already running due to a previous trigger. It's the perfect tool for preventing duplicate submissions or actions caused by rapid, repeated events where only the first "available" trigger should be processed.
+Use `exhaustMap` when you want to ensure that an action triggered by an event stream only runs if it's not already running due to a previous trigger. It's the perfect tool for preventing duplicate submissions or actions caused by rapid, repeated events where only the first "available" trigger should be processed.

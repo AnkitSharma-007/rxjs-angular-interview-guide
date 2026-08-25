@@ -20,6 +20,13 @@ Here's how it works:
 
 Think of it as spawning multiple asynchronous tasks based on incoming triggers and collecting all their results together as they complete, without cancelling anything.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `mergeMap(project, concurrent?)` where `concurrent` caps how many inner Observables run at once
+    - **Use when:** independent async operations should run in parallel and every result matters
+    - **Avoid when:** order matters (use `concatMap`) or only the latest result matters (use `switchMap`)
+    - **Top gotcha:** concurrency is unbounded by default; a burst of source values means a burst of parallel requests
+
 ## Key Characteristics
 
 - **Higher-Order Mapping:** Maps values from an outer Observable to inner Observables.
@@ -27,6 +34,31 @@ Think of it as spawning multiple asynchronous tasks based on incoming triggers a
 - **Merging Output:** Combines emissions from all active inner Observables into a single output stream.
 - **No Cancellation:** Does not cancel previous inner operations when new outer values arrive.
 - **Use Cases:** Ideal when you need to perform multiple asynchronous actions concurrently based on source emissions and want the results from _all_ of them. Useful when the order of completion isn't strictly important, and parallel processing is beneficial.
+
+## Minimal Example
+
+```typescript
+import { interval, map, mergeMap, take } from "rxjs";
+
+// source emits 0, 1, one value per second
+interval(1000)
+  .pipe(
+    take(2),
+    mergeMap((n) =>
+      interval(700).pipe(
+        take(2),
+        map((i) => `outer ${n} / inner ${i}`),
+      ),
+    ),
+  )
+  .subscribe(console.log);
+
+// Output: every inner stream runs to completion, nothing is cancelled
+// outer 0 / inner 0
+// outer 0 / inner 1
+// outer 1 / inner 0
+// outer 1 / inner 1
+```
 
 ## Real-World Example Scenario
 
@@ -40,168 +72,97 @@ Imagine you're working on a feature in an Angular application where a user can m
 
 `mergeMap` is perfect for this because it will take each item ID, trigger its corresponding API call (inner Observable), run all these API calls concurrently, and merge their results (e.g., success/error responses) into the output stream as they arrive.
 
-## Code Snippet (Angular Component - Save All Example)
+## Angular Example
 
 ```typescript
-import { Component } from "@angular/core";
+import { Component, inject, signal } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { from, of, Observable } from "rxjs";
-import { mergeMap, catchError, map, tap } from "rxjs/operators";
-
-interface SaveItem {
-  id: string;
-  payload: any;
-  apiUrl: string;
-}
+import { catchError, from, map, mergeMap, of } from "rxjs";
 
 interface SaveResult {
   id: string;
   success: boolean;
-  message: string;
-  response?: any;
 }
 
 @Component({
-  selector: "app-save-all-demo",
+  selector: "app-save-all",
   template: `
-    <h4>Concurrent Save Demo</h4>
-    <button (click)="saveAll()" class="btn btn-primary" [disabled]="isSaving">
-      {{ isSaving ? "Saving..." : "Save All Changes" }}
+    <button (click)="saveAll()" [disabled]="saving()">
+      {{ saving() ? "Saving..." : "Save All" }}
     </button>
-    <ul class="list-group mt-2">
-      <li
-        *ngFor="let result of saveResults"
-        class="list-group-item"
-        [ngClass]="{
-          'list-group-item-success': result.success,
-          'list-group-item-danger': !result.success,
-        }"
-      >
-        {{ result.message }}
-      </li>
+    <ul>
+      @for (result of results(); track result.id) {
+        <li>{{ result.id }}: {{ result.success ? "saved" : "failed" }}</li>
+      }
     </ul>
   `,
 })
-export class SaveAllDemoComponent {
-  saveResults: SaveResult[] = [];
-  isSaving = false;
+export class SaveAllComponent {
+  private readonly http = inject(HttpClient);
 
-  constructor(private http: HttpClient) {}
+  protected readonly saving = signal(false);
+  protected readonly results = signal<SaveResult[]>([]);
 
   saveAll(): void {
-    this.isSaving = true;
-    this.saveResults = []; // Clear previous results
+    const ids = ["doc1", "settingA", "userPrefX"];
+    this.saving.set(true);
+    this.results.set([]);
 
-    // 1. Define the items that need saving (could come from component state)
-    const itemsToSave: SaveItem[] = [
-      {
-        id: "doc1",
-        payload: { content: "Updated content for Doc 1" },
-        apiUrl: "/api/documents/doc1",
-      },
-      {
-        id: "settingA",
-        payload: { value: true },
-        apiUrl: "/api/settings/settingA",
-      },
-      {
-        id: "userPrefX",
-        payload: { theme: "dark" },
-        apiUrl: "/api/preferences/userPrefX",
-      },
-    ];
-
-    // 2. Create an Observable from the array of items
-    const itemsSource$ = from(itemsToSave);
-
-    // 3. Use mergeMap to process each item concurrently
-    itemsSource$
+    from(ids)
       .pipe(
-        tap((item) =>
-          console.log(
-            `Starting save process for: ${
-              item.id
-            } at ${new Date().toLocaleTimeString()}`,
+        // all PUTs run concurrently; results arrive in completion order
+        mergeMap((id) =>
+          this.http.put(`/api/items/${id}`, { id }).pipe(
+            map(() => ({ id, success: true })),
+            // catch per item so one failure does not stop the others
+            catchError(() => of({ id, success: false })),
           ),
         ),
-        mergeMap(
-          // This function is called for each item ('doc1', 'settingA', 'userPrefX')
-          (itemToSave: SaveItem) => {
-            console.log(
-              `   [mergeMap] Triggering API call for: ${itemToSave.id}`,
-            );
-            // Return the inner Observable (the HTTP PUT/POST request) for this item
-            // mergeMap subscribes to this immediately and runs it concurrently with others.
-            return this.http
-              .put<any>(itemToSave.apiUrl, itemToSave.payload)
-              .pipe(
-                // Map the successful HTTP response to a SaveResult object
-                map((response) => ({
-                  id: itemToSave.id,
-                  success: true,
-                  message: `Successfully saved ${itemToSave.id}.`,
-                  response: response,
-                })),
-                // Catch errors specific to this *inner* HTTP request
-                catchError((error) => {
-                  console.error(`Error saving ${itemToSave.id}:`, error);
-                  // Return an Observable emitting a failure SaveResult
-                  // 'of()' creates an Observable that emits the value and completes.
-                  return of({
-                    id: itemToSave.id,
-                    success: false,
-                    message: `Failed to save ${itemToSave.id}: ${
-                      error.statusText || "Unknown error"
-                    }`,
-                  });
-                }),
-              ); // End of inner http observable pipe
-          }, // End of mergeMap project function
-        ), // End of outer pipe
       )
       .subscribe({
-        next: (result: SaveResult) => {
-          // This 'next' handler receives results from *any* of the inner HTTP calls
-          // as they complete. The order is not guaranteed.
-          console.log(`Received result: ${result.message}`);
-          this.saveResults.push(result);
-        },
-        error: (err) => {
-          // This catches errors in the outer stream (e.g., if 'from(itemsToSave)' failed)
-          // Errors from inner HTTP calls are caught by the inner catchError.
-          console.error("Outer stream error:", err);
-          this.isSaving = false;
-          this.saveResults.push({
-            id: "GLOBAL_ERROR",
-            success: false,
-            message: "An unexpected error occurred in the save process.",
-          });
-        },
-        complete: () => {
-          // This is called only when the outer stream (itemsSource$) completes AND
-          // *all* inner Observables spawned by mergeMap have also completed.
-          console.log(
-            `All save operations finalized at ${new Date().toLocaleTimeString()}.`,
-          );
-          this.isSaving = false;
-        },
+        next: (result) => this.results.update((r) => [...r, result]),
+        complete: () => this.saving.set(false), // fires when ALL saves finish
       });
   }
 }
 ```
 
-**Explanation:**
+**How it works:**
 
-1.  **`from(itemsToSave)`**: Creates the outer Observable, emitting each `SaveItem` object one by one.
-2.  **`mergeMap((itemToSave: SaveItem) => ...)`**: For each `SaveItem` emitted by `from()`:
-    - It immediately calls the function provided.
-    - This function returns `this.http.put(...)`, which is the inner Observable representing the API call for _that specific item_.
-    - `mergeMap` subscribes to this inner Observable **without unsubscribing** from any previous ones. If `from()` emits `item1`, `item2`, `item3` quickly, `mergeMap` will likely have three concurrent `http.put` requests running.
-3.  **Inner `map` and `catchError`**: These handle the result of each individual API call, transforming it into a standard `SaveResult` format whether it succeeds or fails. The `catchError` prevents a single failed save from stopping the processing of other saves.
-4.  **`subscribe({...})`**:
-    - The `next` handler receives `SaveResult` objects as soon as _any_ of the concurrent HTTP requests complete. The order might be different from the order in `itemsToSave` depending on server response times.
-    - The `complete` handler only fires when _all_ items from the `from()` observable have been processed by `mergeMap`, _and all_ the corresponding inner HTTP observables have completed.
+1. `from(ids)` emits each item id one by one.
+2. `mergeMap` starts an HTTP `PUT` for each id immediately, without waiting for or cancelling the others. With three quick emissions there are three requests in flight at once.
+3. The inner `map`/`catchError` turn each response into a `SaveResult`, so one failed save cannot error the whole stream.
+4. `next` receives results in **completion order**, not input order. `complete` fires only after the source is done and every inner request has finished.
+5. To limit parallelism, pass a concurrency cap: `mergeMap(project, 2)` keeps at most two requests in flight and queues the rest.
+
+## Common Mistakes
+
+**Using `mergeMap` for type-ahead search.** Responses can arrive out of order, so results for an old term can overwrite results for the latest term. Use [`switchMap`](switchMap.md), which cancels stale requests.
+
+**No concurrency cap on large batches.** `from(thousandIds).pipe(mergeMap(fetch))` fires a thousand parallel requests. Pass the second argument, `mergeMap(fetch, 4)`, to keep a bounded pool and queue the rest.
+
+**Expecting output order to match input order.** Results are merged in completion order. If order matters, use [`concatMap`](concatMap.md).
+
+## Interview Q&A
+
+??? question "What does the second argument of mergeMap do?"
+
+    It caps how many inner Observables are subscribed at once. Extra source values wait in a queue until a slot frees up. `mergeMap(project, 1)` behaves exactly like `concatMap`, which is a useful fact for follow-up questions.
+
+??? question "Why can mergeMap cause race conditions in UIs?"
+
+    Because nothing is cancelled and nothing is ordered: two in-flight requests can resolve in any order, and the UI shows whichever wrote last. For latest-wins UI state, `switchMap` is the fix; for strict ordering, `concatMap`.
+
+??? question "When does the merged stream complete?"
+
+    Only when the source has completed **and** every active inner Observable has completed. If any inner stream never completes (an `interval`, a long-lived Subject), the output never completes either, which is a common source of leaks.
+
+## Related
+
+- [switchMap vs mergeMap vs concatMap](../../comparisons/switchMap-mergeMap-concatMap.md) for the full decision table
+- [forkJoin](../combination/forkJoin.md) to run requests in parallel but get one combined emission at the end
+- [concatMap](concatMap.md) when results must stay in source order
 
 ## Summary
 
-use `mergeMap()` when you need to trigger multiple asynchronous operations based on incoming events/data and want them to run **concurrently**, collecting all their results as they finish. It's ideal for parallelism where cancellation of previous operations is not needed or desired.
+Use `mergeMap()` when you need to trigger multiple asynchronous operations based on incoming events/data and want them to run **concurrently**, collecting all their results as they finish. It's ideal for parallelism where cancellation of previous operations is not needed or desired.

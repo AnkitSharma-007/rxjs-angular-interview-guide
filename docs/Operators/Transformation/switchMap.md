@@ -19,12 +19,45 @@ The crucial part is the "**switch**" behavior:
 
 Essentially, `switchMap` **cancels** the previous ongoing inner operation and switches its focus entirely to the new one triggered by the most recent source emission. You only get values from the _currently active_ inner Observable.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `switchMap(project)` where `project` maps each source value to an Observable
+    - **Use when:** only the latest result matters: type-ahead search, route param changes, refreshing data
+    - **Avoid when:** every operation must finish (saves, uploads, ordered writes)
+    - **Top gotcha:** each new source value unsubscribes the in-flight inner Observable; with `HttpClient` that aborts the request
+
 ## Key Characteristics
 
 - **Higher-Order Mapping:** Maps values from an outer Observable to inner Observables.
 - **Switching/Cancellation:** Unsubscribes from the previous inner Observable when the outer source emits a new value.
 - **Focus on Latest:** Only emissions from the most recent inner Observable are passed downstream.
 - **Use Cases:** Ideal when you only care about the result corresponding to the latest trigger event and want to discard results from previous, potentially outdated triggers.
+
+## Minimal Example
+
+```typescript
+import { interval, map, switchMap, take } from "rxjs";
+
+// source emits 0, 1, 2, one value per second
+interval(1000)
+  .pipe(
+    take(3),
+    switchMap((n) =>
+      // each source value starts a slower inner stream of two values
+      interval(700).pipe(
+        take(2),
+        map((i) => `outer ${n} / inner ${i}`),
+      ),
+    ),
+  )
+  .subscribe(console.log);
+
+// Output:
+// outer 0 / inner 0   (inner for 0 is cancelled before its 2nd value)
+// outer 1 / inner 0   (inner for 1 is cancelled too)
+// outer 2 / inner 0
+// outer 2 / inner 1   (only the last inner stream runs to completion)
+```
 
 ## Real-World Example Scenario (The Classic Use Case): Type-Ahead Search
 
@@ -36,181 +69,114 @@ This is the quintessential example for `switchMap`. Imagine you have a search in
 
 You only care about the results for the _latest_ search term ("ang"). `switchMap` ensures that you don't receive outdated results (like suggestions for "a" arriving _after_ suggestions for "ang") and prevents unnecessary network requests from completing if they've already been superseded.
 
-## Code Snippet
+## Angular Example
 
 ```typescript
+import { Component, inject } from "@angular/core";
+import { HttpClient } from "@angular/common/http";
+import { FormControl, ReactiveFormsModule } from "@angular/forms";
+import { toSignal } from "@angular/core/rxjs-interop";
 import {
-  Component,
-  OnInit,
-  ViewChild,
-  ElementRef,
-  OnDestroy,
-} from "@angular/core";
-import { HttpClient, HttpParams } from "@angular/common/http";
-import { fromEvent, Observable, Subscription, of } from "rxjs";
-import {
-  map,
-  debounceTime, // Wait for pauses in typing
-  distinctUntilChanged, // Only search if the term changes
-  switchMap, // Cancel previous requests, switch to new one
-  catchError, // Handle HTTP errors
-  tap, // For logging side-effects
-} from "rxjs/operators";
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  of,
+  switchMap,
+} from "rxjs";
+
+interface Suggestion {
+  title: string;
+  url: string;
+}
 
 @Component({
   selector: "app-typeahead-search",
+  imports: [ReactiveFormsModule],
   template: `
-    <h4>Live Search Example</h4>
     <input
-      #searchInput
-      type="text"
-      placeholder="Search Wikipedia..."
-      class="form-control"
+      [formControl]="searchControl"
+      type="search"
+      placeholder="Search..."
     />
-    <div *ngIf="loading" class="spinner-border spinner-border-sm" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-    <ul class="list-group mt-2" *ngIf="results$ | async as results">
-      <li *ngIf="results.length === 0 && lastSearchTerm && !loading">
-        No results found for "{{ lastSearchTerm }}"
-      </li>
-      <li *ngFor="let result of results" class="list-group-item">
-        <a [href]="result.link" target="_blank">{{ result.title }}</a>
-        <p>{{ result.description }}</p>
-      </li>
+
+    <ul>
+      @for (suggestion of suggestions(); track suggestion.url) {
+        <li>
+          <a [href]="suggestion.url" target="_blank">{{ suggestion.title }}</a>
+        </li>
+      } @empty {
+        <li>Type to search.</li>
+      }
     </ul>
-    <div *ngIf="searchError" class="alert alert-danger mt-2">
-      Error: {{ searchError }}
-    </div>
   `,
 })
-export class TypeaheadSearchComponent implements OnInit, OnDestroy {
-  @ViewChild("searchInput", { static: true }) searchInput:
-    | ElementRef
-    | undefined;
+export class TypeaheadSearchComponent {
+  private readonly http = inject(HttpClient);
 
-  results$: Observable<any[]> | undefined;
-  loading = false;
-  searchError: string | null = null;
-  lastSearchTerm: string | null = null;
+  protected readonly searchControl = new FormControl("", {
+    nonNullable: true,
+  });
 
-  private searchSubscription: Subscription | undefined;
-
-  // Using Wikipedia's public API for demonstration
-  private WIKI_API_URL = "https://en.wikipedia.org/w/api.php";
-
-  constructor(private http: HttpClient) {}
-
-  ngOnInit(): void {
-    if (!this.searchInput) return;
-
-    // 1. Get the stream of input events from the input element
-    const inputEvents$ = fromEvent<InputEvent>(
-      this.searchInput.nativeElement,
-      "input",
-    );
-
-    this.results$ = inputEvents$.pipe(
-      // 2. Get the trimmed value from the input event
-      map((event) => (event.target as HTMLInputElement).value.trim()),
-
-      // 3. Wait for 400ms pause in typing before proceeding
-      debounceTime(400),
-
-      // 4. Only proceed if the value has actually changed from the last time
-      distinctUntilChanged(),
-
-      // 5. Show loading indicator and log the term
-      tap((term) => {
-        console.log(
-          `Searching for: "${term}" at ${new Date().toLocaleTimeString()}`,
-        );
-        this.loading = term.length > 0; // Show loading only if there's a term
-        this.searchError = null; // Clear previous errors
-        this.lastSearchTerm = term; // Keep track of the term searched
-        // tap is for side effects only; its return value is ignored.
-        // The empty-term case is handled inside switchMap below.
-      }),
-
-      // 6. The core: switchMap! Map the search term to an HTTP request Observable
+  // debounced term -> switched HTTP request -> signal the template can read
+  protected readonly suggestions = toSignal(
+    this.searchControl.valueChanges.pipe(
+      debounceTime(300), // wait for a pause in typing
+      distinctUntilChanged(), // ignore repeats of the same term
       switchMap((term) => {
-        if (term.length === 0) {
-          // If term is empty after debounce/distinct, return observable of empty array
-          this.loading = false;
-          return of([]); // 'of' creates an Observable that emits [] and completes
+        const query = term.trim();
+        if (!query) {
+          return of<Suggestion[]>([]); // empty input clears the list, no request
         }
-
-        // Prepare parameters for Wikipedia API call
-        const params = new HttpParams()
-          .set("action", "opensearch")
-          .set("search", term)
-          .set("limit", "10") // Limit results
-          .set("namespace", "0")
-          .set("format", "json")
-          .set("origin", "*"); // Needed for CORS in browser
-
-        // Return the inner Observable (the HTTP GET request)
-        // If a new term arrives quickly, switchMap will cancel this HTTP request
-        // if it's still pending, and start a new one for the new term.
-        return this.http.get<any[]>(this.WIKI_API_URL, { params }).pipe(
-          map((response) => {
-            // Wikipedia API returns [searchTerm, [titles], [descriptions], [links]]
-            // Let's transform this into a more usable array of objects
-            const titles = response[1] || [];
-            const descriptions = response[2] || [];
-            const links = response[3] || [];
-            return titles.map((title: string, index: number) => ({
-              title: title,
-              description: descriptions[index],
-              link: links[index],
-            }));
-          }),
-          catchError((err) => {
-            console.error("API Error:", err);
-            this.searchError = `Failed to fetch results (${
-              err.message || "Unknown error"
-            })`;
-            this.loading = false;
-            return of([]); // Return an empty array Observable on error to keep the stream alive
-          }),
-        );
+        return this.http
+          .get<Suggestion[]>("/api/suggestions", { params: { q: query } })
+          .pipe(
+            // handle errors INSIDE switchMap so one failure
+            // does not kill the whole valueChanges stream
+            catchError(() => of<Suggestion[]>([])),
+          );
       }),
-
-      // 7. Hide loading indicator after results arrive or error handled
-      tap(() => (this.loading = false)),
-    );
-
-    // We can let the async pipe handle the subscription in the template
-    // this.searchSubscription = this.results$.subscribe(); // Manual subscription not needed for display with async pipe
-  }
-
-  ngOnDestroy(): void {
-    // Although switchMap handles inner subscriptions, if the component itself
-    // is destroyed, we should clean up the main subscription to fromEvent
-    // (if we were subscribing manually). AsyncPipe handles this automatically.
-    // if (this.searchSubscription) {
-    //   this.searchSubscription.unsubscribe();
-    // }
-    console.log("Typeahead search component destroyed.");
-  }
+    ),
+    { initialValue: [] },
+  );
 }
 ```
 
-**Explanation:**
+**How it works:**
 
-1.  **`fromEvent`**: Creates the outer Observable from input events.
-2.  **`map`**: Extracts the text value.
-3.  **`debounceTime(400)`**: Waits for the user to pause typing for 400ms before emitting the term.
-4.  **`distinctUntilChanged()`**: Prevents searching if the term hasn't changed (e.g., typing "a", deleting "a", typing "a" again quickly).
-5.  **`tap`**: Used for side effects like logging and setting the `loading` flag.
-6.  **`switchMap(term => ...)`**: This is the key part.
-    - It receives the debounced, distinct search `term`.
-    - If the `term` is empty, it returns `of([])` (an Observable that emits an empty array and completes) to clear results.
-    - If the `term` exists, it returns `this.http.get(...)` which is the _inner Observable_.
-    - If a new `term` arrives from `distinctUntilChanged` _before_ the `http.get` for the previous `term` completes, `switchMap` **cancels** that pending HTTP request and starts a new one for the new `term`.
-7.  **`catchError`**: Handles potential errors during the HTTP request _inside_ `switchMap` so that an API failure doesn't kill the entire input event stream.
-8.  **`async` pipe:** In the template (`*ngIf="results$ | async as results"`), the `async` pipe subscribes to `results$` and automatically handles updates and unsubscription when the component is destroyed.
+1. `valueChanges` emits every keystroke from the reactive form control.
+2. `debounceTime(300)` waits for a pause in typing; `distinctUntilChanged()` skips unchanged terms.
+3. `switchMap` maps the term to an `HttpClient` request. If a new term arrives while a request is in flight, `switchMap` unsubscribes from it, which makes `HttpClient` **abort the HTTP request**, and subscribes to the new one.
+4. `catchError` sits on the inner Observable, so an API failure emits an empty list and the search keeps working.
+5. `toSignal` subscribes once, exposes the latest results as a signal for the template, and unsubscribes automatically when the component is destroyed.
+
+## Common Mistakes
+
+**Using `switchMap` for saves.** Cancelling an in-flight `POST`/`PUT` does not undo it on the server, and the response you needed is discarded. Use [`concatMap`](concatMap.md) for ordered writes or [`exhaustMap`](exhaustMap.md) to ignore repeat clicks.
+
+**Putting `catchError` on the outer stream.** If the error is handled outside `switchMap`, the whole source stream completes on the first failure and the search box stops responding. Handle errors on the inner Observable, as above.
+
+**Nesting subscriptions instead.** `stream.subscribe(v => this.http.get(...).subscribe(...))` has no cancellation, leaks subscriptions, and is the pattern interviewers most want to see you replace with `switchMap`.
+
+## Interview Q&A
+
+??? question "What happens to the previous inner Observable when the source emits again?"
+
+    `switchMap` unsubscribes from it. Teardown logic runs: an `HttpClient` request is aborted, timers are cleared. Any values it would have produced are never seen downstream. This unsubscribe-based cancellation is the core difference from `mergeMap` and `concatMap`.
+
+??? question "Why is switchMap right for autocomplete but wrong for saving a form?"
+
+    Autocomplete only cares about results for the latest term, so cancelling stale requests is exactly what you want. A save must complete: cancelling the HTTP response does not cancel the server-side write, so you can end up with saves you cannot confirm. Use `concatMap` (queue in order) or `exhaustMap` (ignore clicks while saving).
+
+??? question "Does switchMap cancel the outer source too?"
+
+    No. Only the current inner Observable is unsubscribed. The outer stream stays alive, and each new outer value creates a fresh inner subscription.
+
+## Related
+
+- [switchMap vs mergeMap vs concatMap](../../comparisons/switchMap-mergeMap-concatMap.md) for choosing between the mapping strategies
+- [exhaustMap](exhaustMap.md) for ignoring new values while one is in flight
+- [debounceTime](../filtering/debounceTime.md) and [distinctUntilChanged](../filtering/distinctUntilChanged.md), its usual companions
 
 ## Summary
 
-`switchMap` is your go-to operator when you need to map an event or value to an inner asynchronous operation (like an API call) and you only care about the results of the _latest_ operation, wanting to cancel any previous, now-irrelevant operations.
+`switchMap` maps each source value to an inner Observable and only ever keeps the newest one alive. Reach for it when the latest request wins: type-ahead search, reacting to route param changes, or refreshing data. Avoid it whenever a cancelled operation would mean lost work.

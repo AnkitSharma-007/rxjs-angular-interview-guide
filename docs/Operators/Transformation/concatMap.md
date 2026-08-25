@@ -20,6 +20,13 @@ Here's the flow:
 
 Think of it as processing tasks in a single-file line: the next task only starts once the current one is completely finished.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `concatMap(project)`, equivalent to `mergeMap(project, 1)`
+    - **Use when:** operations must run one at a time, in source order: ordered writes, task queues
+    - **Avoid when:** operations are independent and could run in parallel, or the source emits faster than inner streams complete
+    - **Top gotcha:** an inner Observable that never completes blocks the queue forever
+
 ## Key Characteristics
 
 - **Higher-Order Mapping:** Maps values from an outer Observable to inner Observables.
@@ -27,6 +34,32 @@ Think of it as processing tasks in a single-file line: the next task only starts
 - **Waits for Completion:** Does not subscribe to the next inner Observable until the previous one completes.
 - **Preserves Order:** Guarantees that the output values maintain the order corresponding to the source emissions.
 - **Use Cases:** Ideal when the order of operations is crucial, or when you need to ensure one asynchronous task finishes before the next begins (e.g., to avoid race conditions, maintain data integrity, or process items sequentially). Also useful for implicit rate-limiting when you don't want concurrent requests.
+
+## Minimal Example
+
+```typescript
+import { concatMap, interval, map, take } from "rxjs";
+
+interval(300)
+  .pipe(
+    take(3), // source emits 0, 1, 2 quickly
+    concatMap((n) =>
+      interval(1000).pipe(
+        take(2),
+        map((i) => `outer ${n} / inner ${i}`),
+      ),
+    ),
+  )
+  .subscribe(console.log);
+
+// Inner streams never overlap; order is preserved:
+// outer 0 / inner 0
+// outer 0 / inner 1
+// outer 1 / inner 0
+// outer 1 / inner 1
+// outer 2 / inner 0
+// outer 2 / inner 1
+```
 
 ## Real-World Example Scenario
 
@@ -42,196 +75,92 @@ You want to ensure the updates are applied strictly in the order the user clicke
 
 `concatMap` enforces this sequential processing.
 
-## Code Snippet (Angular Component - Sequential Updates)
+## Angular Example
 
 ```typescript
-import { Component, OnDestroy } from "@angular/core";
+import { Component, inject, signal } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { Subject, Subscription, Observable, of } from "rxjs";
-import { concatMap, catchError, tap, delay } from "rxjs/operators"; // Import concatMap
-
-interface UpdateAction {
-  id: string; // Unique identifier for the action
-  type: string;
-  payload: any;
-  apiUrl: string;
-}
-
-interface UpdateResult {
-  actionId: string;
-  success: boolean;
-  message: string;
-}
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { Subject, catchError, concatMap, map, of } from "rxjs";
 
 @Component({
   selector: "app-sequential-updates",
   template: `
-    <h4>Sequential Update Demo</h4>
-    <p>
-      Rapidly click the buttons below. Updates will be processed one after
-      another.
-    </p>
-    <button
-      (click)="triggerUpdate('Add Feature A', '/api/features')"
-      class="btn btn-info me-2"
-    >
-      Add Feature A
-    </button>
-    <button
-      (click)="triggerUpdate('Enable Setting B', '/api/settings/b')"
-      class="btn btn-info me-2"
-    >
-      Enable Setting B
-    </button>
-    <button
-      (click)="triggerUpdate('Add User C', '/api/users')"
-      class="btn btn-info me-2"
-    >
-      Add User C
-    </button>
+    <p>Click rapidly: updates still run strictly one at a time, in order.</p>
+    <button (click)="queue('add-feature')">Add Feature</button>
+    <button (click)="queue('enable-setting')">Enable Setting</button>
+    <button (click)="queue('add-user')">Add User</button>
 
-    <div class="mt-3">
-      <h5>Processing Log:</h5>
-      <ul class="list-group">
-        <li
-          *ngFor="let log of processingLog"
-          class="list-group-item small"
-          [ngClass]="{
-            'list-group-item-success': log.includes('Success'),
-            'list-group-item-danger': log.includes('Failed'),
-            'list-group-item-secondary':
-              log.includes('Queueing') || log.includes('Starting'),
-          }"
-        >
-          {{ log }}
-        </li>
-      </ul>
-    </div>
+    <ul>
+      @for (entry of log(); track $index) {
+        <li>{{ entry }}</li>
+      }
+    </ul>
   `,
 })
-export class SequentialUpdatesComponent implements OnDestroy {
-  processingLog: string[] = [];
+export class SequentialUpdatesComponent {
+  private readonly http = inject(HttpClient);
+  private readonly actions$ = new Subject<string>();
 
-  // Use a Subject to push actions onto the stream when buttons are clicked
-  private actionSubject = new Subject<UpdateAction>();
-  private actionSubscription: Subscription;
+  protected readonly log = signal<string[]>([]);
 
-  constructor(private http: HttpClient) {
-    // Subscribe to the action stream and use concatMap for processing
-    this.actionSubscription = this.actionSubject
+  constructor() {
+    this.actions$
       .pipe(
-        tap((action) => {
-          const logMsg = `[${new Date().toLocaleTimeString()}] Queueing: ${
-            action.type
-          } (ID: ${action.id})`;
-          console.log(logMsg);
-          this.processingLog.push(logMsg);
-        }),
-        // concatMap ensures the next action waits until the inner observable (API call) completes
-        concatMap((action: UpdateAction) => {
-          const startLogMsg = `[${new Date().toLocaleTimeString()}] Starting API call for: ${
-            action.type
-          } (ID: ${action.id})`;
-          console.log(`   ${startLogMsg}`);
-          this.processingLog.push(startLogMsg);
-
-          // Simulate API call - Replace with actual http.post/put
-          // Adding a delay to better visualize the sequential nature
-          const innerApiCall$ = of({
-            success: true,
-            received: action.payload,
-          }).pipe(
-            delay(1500 + Math.random() * 1000), // Simulate network latency (1.5 - 2.5 seconds)
-          );
-          // const innerApiCall$ = this.http.post<any>(action.apiUrl, action.payload)
-
-          return innerApiCall$.pipe(
-            // Map the successful result
-            map((response) => ({
-              actionId: action.id,
-              success: true,
-              message: `Success: ${action.type} (ID: ${action.id}) completed.`,
-            })),
-            // Catch errors for *this specific* API call
-            catchError((error) => {
-              console.error(
-                `Error processing ${action.type} (ID: ${action.id}):`,
-                error,
-              );
-              // Return an Observable emitting the failure result
-              return of({
-                actionId: action.id,
-                success: false,
-                message: `Failed: ${action.type} (ID: ${action.id}) - ${
-                  error.message || "Unknown error"
-                }`,
-              });
-            }),
-          ); // End of inner pipe
-        }), // End of concatMap
+        // one update at a time, in click order; later clicks wait in a queue
+        concatMap((action) =>
+          this.http.post(`/api/profile/${action}`, {}).pipe(
+            map(() => `${action}: done`),
+            // catch per action so one failure does not kill the queue
+            catchError(() => of(`${action}: failed`)),
+          ),
+        ),
+        takeUntilDestroyed(),
       )
-      .subscribe({
-        next: (result: UpdateResult) => {
-          // This receives results one by one, *in order*, after each API call completes
-          const logMsg = `[${new Date().toLocaleTimeString()}] ${
-            result.message
-          }`;
-          console.log(logMsg);
-          this.processingLog.push(logMsg);
-        },
-        error: (err) => {
-          // Error in the main action stream (unlikely with Subject unless error pushed)
-          const logMsg = `[${new Date().toLocaleTimeString()}] Critical stream error: ${err}`;
-          console.error(logMsg);
-          this.processingLog.push(logMsg);
-        },
-        complete: () => {
-          // Only called if the actionSubject itself completes (not typical for button clicks)
-          const logMsg = `[${new Date().toLocaleTimeString()}] Action stream completed.`;
-          console.log(logMsg);
-          this.processingLog.push(logMsg);
-        },
-      });
+      .subscribe((entry) => this.log.update((l) => [...l, entry]));
   }
 
-  triggerUpdate(type: string, apiUrl: string): void {
-    const action: UpdateAction = {
-      id: Math.random().toString(36).substring(2, 9), // Generate simple unique ID
-      type: type,
-      payload: { timestamp: new Date().toISOString() }, // Example payload
-      apiUrl: apiUrl,
-    };
-    console.log(
-      `[${new Date().toLocaleTimeString()}] Button clicked, pushing action: ${type} (ID: ${
-        action.id
-      })`,
-    );
-    this.actionSubject.next(action); // Push the action onto the Subject stream
-  }
-
-  ngOnDestroy(): void {
-    // Clean up the subscription when the component is destroyed
-    if (this.actionSubscription) {
-      this.actionSubscription.unsubscribe();
-      console.log("Sequential updates subscription stopped.");
-    }
-    this.actionSubject.complete(); // Also complete the subject
+  queue(action: string): void {
+    this.actions$.next(action);
   }
 }
 ```
 
-**Explanation:**
+**How it works:**
 
-1.  **`Subject<UpdateAction>`**: We use a Subject (`actionSubject`) to act as the source Observable. Button clicks push `UpdateAction` objects onto this Subject using `actionSubject.next(action)`.
-2.  **`concatMap((action: UpdateAction) => ...)`**: This is the core.
-    - When the `actionSubject` emits an action, `concatMap` takes it.
-    - It executes the inner function, which returns the inner Observable (`innerApiCall$`).
-    - `concatMap` subscribes to `innerApiCall$`.
-    - **Crucially**: If another action is pushed onto `actionSubject` _before_ `innerApiCall$` completes, `concatMap` **waits**. It doesn't execute the inner function for the new action yet.
-    - Only when the current `innerApiCall$` completes (either successfully maps to a result or is handled by `catchError`) does `concatMap` proceed to process the next queued action from `actionSubject`.
-3.  **`delay()`**: Added inside the simulated API call to make the sequential waiting behavior obvious in the log.
-4.  **Logging**: The console and UI logs will clearly show actions being queued, then starting, then completing one after another, even if the buttons are clicked very rapidly.
+1. Button clicks push action names into a `Subject`, which is the source stream.
+2. `concatMap` maps each action to an HTTP `POST`, but subscribes to the next one **only after the current one completes**. Rapid clicks queue up instead of firing in parallel.
+3. The per-action `catchError` converts a failure into a value, so the queue keeps processing later actions.
+4. `takeUntilDestroyed()` ends the subscription with the component, so no leak survives navigation.
+
+## Common Mistakes
+
+**An inner Observable that never completes.** `concatMap` waits for completion before starting the next item. Map to something that completes (an HTTP call, `of(...)`, a stream with `take`/`first`), or the queue stalls forever.
+
+**Using it on high-frequency streams.** If the source emits faster than inner streams finish, the queue grows without bound. Consider `switchMap` (drop stale), `exhaustMap` (ignore while busy), or a bounded `mergeMap`.
+
+**Skipping per-item error handling.** An uncaught inner error tears down the entire chain, losing every queued item. Put `catchError` on the inner Observable, as in the example.
+
+## Interview Q&A
+
+??? question "How does concatMap relate to mergeMap?"
+
+    `concatMap(project)` is exactly `mergeMap(project, 1)`: a merge with concurrency capped at one. That framing usually impresses interviewers because it shows you understand the concurrency model rather than memorizing operator names.
+
+??? question "What happens if the source emits while an inner Observable is still running?"
+
+    The value is buffered. `concatMap` subscribes to its inner Observable only after the current one completes, so order is preserved at the cost of latency and a growing queue under load.
+
+??? question "When would you pick exhaustMap over concatMap for button clicks?"
+
+    `concatMap` queues every click, so five impatient clicks cause five sequential saves. `exhaustMap` ignores clicks while a save is in flight, which is usually what a submit button wants.
+
+## Related
+
+- [switchMap vs mergeMap vs concatMap](../../comparisons/switchMap-mergeMap-concatMap.md) for the decision table
+- [exhaustMap](exhaustMap.md) to drop new values while one is being processed
+- [mergeMap](mergeMap.md) when parallel execution is safe
 
 ## Summary
 
-use `concatMap` when the **order of execution matters** and you need to ensure that asynchronous operations triggered by a stream of events happen sequentially, one completing before the next one begins. It's your tool for enforcing order in asynchronous workflows.
+Use `concatMap` when the **order of execution matters** and you need to ensure that asynchronous operations triggered by a stream of events happen sequentially, one completing before the next one begins. It's your tool for enforcing order in asynchronous workflows.
