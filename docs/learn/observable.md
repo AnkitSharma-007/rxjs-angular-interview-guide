@@ -34,7 +34,7 @@ Imagine you've ordered food online.
 
 1.  **Fetching Data with `HttpClient`:** This is the most common use case. When you make an HTTP request using Angular's `HttpClient`, it returns an Observable. You subscribe to this Observable to get the response from the server.
 
-    #### Service (`data.service.ts`):
+    **Service (`data.service.ts`):**
 
     ```typescript
     import { Injectable, inject } from "@angular/core";
@@ -54,7 +54,7 @@ Imagine you've ordered food online.
     }
     ```
 
-    #### Component (`my-component.component.ts`):
+    **Component (`my-component.component.ts`):**
 
     ```typescript
     import { Component, inject, signal } from "@angular/core";

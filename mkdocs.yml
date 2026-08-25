@@ -118,7 +118,7 @@ theme:
     text: Roboto
     code: Roboto Mono
   logo: assets/Rx_Logo.png
-  favicon: assets/favicon.ico
+  favicon: assets/favicon.png
   palette:
     # Palette toggle for automatic (system preference) mode
     - media: "(prefers-color-scheme)"
@@ -158,6 +158,7 @@ theme:
 plugins:
   - search
   - tags
+  - privacy # self-host external assets (Google Fonts): faster first paint, no third-party request
   - social:
       enabled: !ENV [CI, false] # needs the imaging dependencies; generate cards in CI only
   - redirects:
@@ -216,6 +217,9 @@ extra:
 
 extra_css:
   - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/a11y.js
 
 # Extensions
 markdown_extensions:

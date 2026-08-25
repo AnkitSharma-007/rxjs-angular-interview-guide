@@ -10,12 +10,12 @@ A **Hot Observable** is one that produces values **even if no one is subscribed*
 
 When you subscribe to a hot Observable, you start receiving values from that point forward. You **miss any values** that were emitted _before_ you subscribed.
 
-### Key Characteristics:
+## Key Characteristics
 
 1.  **Eager Execution (Potentially):** The source of values might start producing immediately (like UI events) or based on some external trigger, not necessarily tied to the first subscription.
 2.  **Shared Execution:** All subscribers listen to the _same_ stream of values. When the Observable emits a value, all current subscribers receive that same value simultaneously.
 
-### Real-World Analogy:
+## Real-World Analogy
 
 - **Live Radio Broadcast:**
 
@@ -31,11 +31,11 @@ When you subscribe to a hot Observable, you start receiving values from that poi
 
       - If you attach an event listener (_subscribe_) to a button at some point, you will only capture the clicks that happen _after_ your listener is active. Clicks that happened before are lost (to your listener).
 
-### Contrast with Cold Observables:
+## Contrast with Cold Observables
 
 Remember, Cold Observables only start when you subscribe, and each subscription gets its own independent run from the beginning (like watching a recorded YouTube video). Hot Observables are live and shared.
 
-### Examples in Angular/RxJS:
+## Examples in Angular/RxJS
 
 1.  **DOM Events using `fromEvent`:** Observables created from browser events are inherently hot.
 

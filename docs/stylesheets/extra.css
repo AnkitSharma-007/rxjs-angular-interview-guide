@@ -1,3 +1,40 @@
 :root  > * {
     --md-primary-fg-color:        #c2185b;
+    /* hover/focus accent: dark pink, 5.8:1 on white (default indigo was 4.3:1) */
+    --md-accent-fg-color:         #c51162;
+  }
+
+/* Dark mode: the primary pink is only 2.7:1 on the slate background, below WCAG AA.
+   Lighten links and hover accent to pass 4.5:1. */
+[data-md-color-scheme="slate"] {
+    --md-typeset-a-color:         #f06292;  /* 5.3:1 on slate */
+    --md-accent-fg-color:         #ff80ab;  /* 6.9:1 on slate */
+  }
+
+/* Footer copyright defaults to 54% opacity text, which fails AA contrast. */
+.md-copyright {
+    color: var(--md-footer-fg-color--light);
+  }
+
+/* Code comments/operators default to 54% black on the grey code background (~4.2:1).
+   Darken/lighten per scheme to clear the 4.5:1 AA bar. */
+[data-md-color-scheme="default"] {
+    --md-code-hl-comment-color:   rgba(0, 0, 0, 0.66);
+    --md-code-hl-operator-color:  rgba(0, 0, 0, 0.66);
+  }
+
+[data-md-color-scheme="slate"] {
+    --md-code-hl-comment-color:   rgba(255, 255, 255, 0.62);
+    --md-code-hl-operator-color:  rgba(255, 255, 255, 0.62);
+  }
+
+/* Links inside body text must not rely on color alone (WCAG 1.4.1). */
+.md-typeset a:not(.md-button):not(.headerlink) {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+.md-typeset .md-nav a,
+.md-typeset .tabbed-labels a {
+    text-decoration: none;
   }
