@@ -12,7 +12,14 @@ Think of the `async` pipe as a smart assistant for handling asynchronous data ri
 2.  **Unwraps Values:** When the Observable emits a new value, the `async` pipe "unwraps" that value and makes it available for binding in your template.
 3.  **Triggers Change Detection:** It automatically tells Angular to check the component for changes whenever a new value arrives, ensuring your view updates.
 4.  **Unsubscribes Automatically:** This is a huge benefit! When the component is destroyed, the `async` pipe automatically unsubscribes from the Observable, preventing potential memory leaks. You don't need manual unsubscription logic (like `takeUntilDestroyed` or `.unsubscribe()`) _for the subscription managed by the pipe itself_.
-5.  **Handles Null/Undefined Initially:** Before the Observable emits its first value, the `async` pipe typically returns `null`, which you can handle gracefully in your template (often using `@if` or `*ngIf`).
+5.  **Handles Null/Undefined Initially:** Before the Observable emits its first value, the `async` pipe typically returns `null`, which you can handle gracefully in your template (usually with an `@if`/`@else` block).
+
+!!! abstract "At a glance"
+
+    - **Syntax:** `{{ stream$ | async }}` or `@if (stream$ | async; as value) { ... }`
+    - **Use when:** the template is the only consumer of the stream; the pipe subscribes, updates, and unsubscribes for you
+    - **Alternative:** `toSignal(stream$)` converts the stream once in the class and gives templates a plain signal; increasingly the default in signals-first codebases
+    - **Top gotcha:** each `| async` in the template is its own subscription; two pipes on a cold stream trigger the work twice
 
 ## Why Use the `async` Pipe?
 
@@ -31,8 +38,7 @@ Fetching data from an API is a prime use case. Let's fetch user data and display
 ```typescript
 import { Injectable, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { Observable } from "rxjs";
-import { shareReplay, tap } from "rxjs/operators";
+import { Observable, shareReplay, tap } from "rxjs";
 
 export interface UserProfile {
   id: number;
@@ -83,14 +89,13 @@ import {
   Input,
   OnInit,
 } from "@angular/core";
-import { CommonModule } from "@angular/common"; // Needed for async pipe, @if, json pipe
+import { AsyncPipe } from "@angular/common"; // the async pipe itself
 import { UserService, UserProfile } from "./user.service"; // Adjust path
 import { Observable, EMPTY } from "rxjs"; // Import Observable and EMPTY
 
 @Component({
   selector: "app-user-display",
-  standalone: true,
-  imports: [CommonModule], // Make sure CommonModule is imported
+  imports: [AsyncPipe],
   template: `
     <div class="user-card">
       <h4>User Profile (ID: {{ userId }})</h4>
@@ -171,7 +176,6 @@ import { UserDisplayComponent } from "./user-display.component"; // Adjust path
 
 @Component({
   selector: "app-root",
-  standalone: true,
   imports: [UserDisplayComponent],
   template: `
     <h1>Async Pipe Demo</h1>
@@ -205,3 +209,32 @@ Compare this component's TypeScript code to the commented-out `ngOnInitManual` e
 ## Error Handling
 
 The basic `async` pipe doesn't inherently handle errors from the Observable. If the `getUser` observable throws an error, the `async` pipe subscription will break. Proper error handling often involves using `catchError` within the Observable pipe _before_ it reaches the `async` pipe (e.g., catching the error and returning `of(null)` or `EMPTY`) or wrapping the component in an Error Boundary mechanism if appropriate.
+
+## Async Pipe or toSignal?
+
+Both solve "consume a stream in the template without manual subscription management":
+
+- **`async` pipe:** zero class code, subscription per pipe usage, value can be `null` before first emission.
+- **`toSignal(stream$, { initialValue })`:** one subscription per component regardless of how many places read it, plain signal semantics in the template, plays naturally with `computed`. Requires an injection context.
+
+In signals-first codebases `toSignal` is becoming the default; the `async` pipe remains ideal for quick, single-use bindings, and it is still what interviewers usually ask about.
+
+## Interview Q&A
+
+??? question "What does the async pipe actually do under the hood?"
+
+    It subscribes on first evaluation, stores the latest value, calls `markForCheck()` on each emission so OnPush components re-render, and unsubscribes in its `ngOnDestroy`. That last part is why it is the standard answer to "how do you avoid subscription leaks in templates?"
+
+??? question "Why can multiple async pipes on the same Observable be a problem?"
+
+    Each pipe is an independent subscription. On a cold source like `HttpClient`, three pipes fire three requests. Fixes: bind once with `@if (user$ | async; as user)` and reuse the local variable, share the stream (`shareReplay`), or convert once with `toSignal`.
+
+??? question "What does the async pipe emit before the first value, and how do you handle it?"
+
+    `null`. Template logic must treat "no value yet" explicitly, usually with `@if`/`@else` for a loading state, or by giving the stream a `startWith` value. This is also why `toSignal` asks for an `initialValue`.
+
+## Related
+
+- [shareReplay](../subjects/shareReplay.md) to share one execution across multiple pipes
+- [takeUntil](../operators/filtering/takeUntil.md) for the manual-subscription counterpart
+- [Observable](../learn/observable.md) for the underlying subscription model

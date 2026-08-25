@@ -42,7 +42,7 @@ of(1, 2, 3)
   .pipe(
     tap((n) => console.log("before map:", n)),
     map((n) => n * 10),
-    tap((n) => console.log("after map:", n))
+    tap((n) => console.log("after map:", n)),
   )
   .subscribe();
 
@@ -102,14 +102,7 @@ import {
 } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { UserDataService, SimpleUser } from "./user-data.service"; // Adjust path
-import {
-  EMPTY,
-  Observable,
-  catchError,
-  delay,
-  finalize,
-  tap,
-} from "rxjs";
+import { EMPTY, Observable, catchError, delay, finalize, tap } from "rxjs";
 
 @Component({
   selector: "app-user-profile",

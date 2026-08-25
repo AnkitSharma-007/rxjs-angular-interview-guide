@@ -45,3 +45,28 @@ Here's a comparison table highlighting the main differences:
 - Use `ReplaySubject` when new subscribers need to get a history of the _last few_ emissions to have proper context.
 
 Remember to expose Subjects from services using `.asObservable()` to prevent external code from calling `.next()` on them, maintaining better encapsulation.
+
+## What About AsyncSubject?
+
+A fourth, rarer family member: `AsyncSubject` emits **only the last value, and only upon completion**. Until `complete()` is called, subscribers receive nothing. It occasionally appears in interviews as "the Subject that behaves like a Promise"; in practice, `lastValueFrom` or `shareReplay(1)` usually covers the need.
+
+## Quick Decision Guide
+
+- Future events only, no memory: [`Subject`](../subjects/subject.md)
+- State with a current value, synchronous reads: [`BehaviorSubject`](../subjects/behaviorSubject.md) (or an Angular signal)
+- Late subscribers need recent history: [`ReplaySubject`](../subjects/replaySubject.md)
+- Final result on completion only: `AsyncSubject` (rare)
+
+## Interview Q&A
+
+??? question "A component subscribes after login already happened and shows 'logged out'. Which Subject type fixes this?"
+
+    A plain `Subject` gives late subscribers nothing, which is the bug. `BehaviorSubject<AuthState>` guarantees the current state on subscribe. This "late subscriber misses state" scenario is the single most common Subject interview question.
+
+??? question "BehaviorSubject vs ReplaySubject(1): when does the difference actually matter?"
+
+    Three edges: `BehaviorSubject` needs an initial value and emits it immediately, has `getValue()`, and after completion emits nothing to new subscribers. `ReplaySubject(1)` starts silent until the first `next`, has no synchronous getter, and still replays the last value after completion. Caching flows feel these differences.
+
+??? question "When should you reach for an Angular signal instead of a BehaviorSubject?"
+
+    For synchronous component or service state that templates read: signals give current-value semantics with less ceremony and fine-grained reactivity. Keep `BehaviorSubject` (or streams generally) when consumers need RxJS operators, or interop with stream-based APIs; bridge with `toSignal`/`toObservable` when both worlds meet.

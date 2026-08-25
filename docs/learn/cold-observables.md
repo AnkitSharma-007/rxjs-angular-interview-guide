@@ -83,3 +83,23 @@ Crucially, **each time you subscribe** to a cold Observable, it starts its work 
 ## Summary
 
 Think of **Cold Observables** as blueprints or recipes for generating data streams. Each time you ask for the stream (by subscribing), the recipe is followed from the start, creating a unique instance just for you. Most Observables you deal with for one-off tasks like API calls are cold.
+
+## Interview Q&A
+
+??? question "Two components use the async pipe on the same service Observable and the API is hit twice. Why, and what is the fix?"
+
+    Because `HttpClient` Observables are cold: each subscription (each async pipe) runs a fresh execution, hence a fresh request. Share one execution by piping the service stream through [`shareReplay({ bufferSize: 1, refCount: true })`](../subjects/shareReplay.md), or convert it to a signal once with `toSignal`.
+
+??? question "What exactly is created per subscription in a cold Observable?"
+
+    The producer itself: the interval timer, the HTTP request, the WebSocket connection defined inside the Observable. Cold means "producer created inside, per subscriber"; hot means "producer exists outside, shared by all subscribers".
+
+??? question "Are all RxJS creation functions cold?"
+
+    Most are (`of`, `from`, `interval`, `timer`, `defer`, `HttpClient` calls). `fromEvent` wraps an external event source, and Subjects push regardless of subscribers, so those behave hot. Operators like `share` convert cold streams into hot ones.
+
+## Next Up
+
+- [Hot Observables](hot-observables.md): the shared, live counterpart
+- [share](../subjects/share.md) and [shareReplay](../subjects/shareReplay.md): making cold streams hot on purpose
+- [Promise vs Observable](promise-vs-observable.md): laziness as an interview theme

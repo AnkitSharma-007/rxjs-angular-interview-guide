@@ -102,14 +102,7 @@ import {
 import { JsonPipe } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { SlowDataService, ExternalData } from "./slow-data.service"; // Adjust path
-import {
-  EMPTY,
-  TimeoutError,
-  catchError,
-  finalize,
-  tap,
-  timeout,
-} from "rxjs";
+import { EMPTY, TimeoutError, catchError, finalize, tap, timeout } from "rxjs";
 
 @Component({
   selector: "app-data-fetcher",

@@ -52,7 +52,7 @@ import { finalize, map, of } from "rxjs";
 of(1, 2, 3)
   .pipe(
     map((n) => n * 10),
-    finalize(() => console.log("teardown: stream ended"))
+    finalize(() => console.log("teardown: stream ended")),
   )
   .subscribe({
     next: console.log,

@@ -100,8 +100,7 @@ Remember, Cold Observables only start when you subscribe, and each subscription 
     ```typescript
     import { Injectable, inject } from "@angular/core";
     import { HttpClient } from "@angular/common/http";
-    import { Observable } from "rxjs";
-    import { shareReplay } from "rxjs/operators";
+    import { Observable, shareReplay } from "rxjs";
 
     @Injectable({ providedIn: "root" })
     export class UserService {
@@ -134,3 +133,23 @@ Remember, Cold Observables only start when you subscribe, and each subscription 
 ## Summary
 
 Think of **Hot Observables** as live, shared streams. They are active regardless of listeners, and subscribers tune in to the ongoing broadcast, potentially missing past events. They are common for UI events, real-time data, and scenarios where you explicitly want to share a single data source execution among multiple consumers using subjects or operators like `shareReplay`.
+
+## Interview Q&A
+
+??? question "What is the practical definition of hot vs cold?"
+
+    Cold: the producer is created inside the Observable, once per subscriber (each subscription = fresh execution). Hot: the producer exists outside and is shared; subscribers join an already-live stream and miss earlier values. The question "where is the producer created?" resolves almost every hot/cold puzzle.
+
+??? question "How do you turn a cold Observable hot in practice?"
+
+    Multicast it: pipe through [`share`](../subjects/share.md) (live-only) or [`shareReplay`](../subjects/shareReplay.md) (with catch-up buffer), or push its values through a [Subject](../subjects/subject.md). This is exactly the "one HTTP request, many consumers" pattern.
+
+??? question "Is fromEvent hot or cold, and what about Subjects?"
+
+    Both are hot in effect. The DOM event source exists independently of subscribers (events fire regardless), and Subjects push to whoever is subscribed at emission time. Neither replays missed values, unlike `ReplaySubject`.
+
+## Next Up
+
+- [Cold Observables](cold-observables.md), the per-subscriber counterpart
+- [Subjects & Multicasting](../subjects/index.md), the tools that make streams hot
+- [shareReplay](../subjects/shareReplay.md) for hot with catch-up

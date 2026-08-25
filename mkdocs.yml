@@ -68,7 +68,7 @@ nav:
       - "Async Pipe": angular/async-pipe.md
   - Comparisons:
       - comparisons/index.md
-      - "switchMap vs mergeMap vs concatMap": comparisons/switchMap-mergeMap-concatMap.md
+      - "switchMap vs mergeMap vs concatMap vs exhaustMap": comparisons/switchMap-mergeMap-concatMap.md
       - "Subject vs BehaviorSubject vs ReplaySubject": comparisons/subject-behaviorSubject-replaySubject.md
 
 # Configuration

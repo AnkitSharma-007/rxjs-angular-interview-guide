@@ -57,3 +57,28 @@ Here's a comparison table and explanations:
 - You are working heavily within the Angular framework, which uses Observables extensively (e.g., `HttpClient`, `Router` events, `EventEmitter`).
 
 In modern Angular, while you _can_ use Promises, Observables are generally preferred for asynchronous operations, especially when dealing with framework features or requiring more complex stream manipulation, due to their power, flexibility, and cancellable nature.
+
+## Converting Between Them
+
+- **Promise to Observable:** [`from(promise)`](../operators/creation/from.md). Remember the promise is still eager and non-cancellable underneath.
+- **Observable to Promise:** `firstValueFrom(obs$)` resolves with the first emission; `lastValueFrom(obs$)` waits for completion and resolves with the final value. Both reject if the source errors, or completes without a value. The old `.toPromise()` method is deprecated and removed in current RxJS; mentioning its replacements is an easy interview win.
+
+## Interview Q&A
+
+??? question "What are the three biggest differences between a Promise and an Observable?"
+
+    Value count (one settle vs many emissions), execution model (eager on creation vs lazy per subscription), and cancellation (none vs unsubscribe-driven teardown). Operators and multicasting come right behind as follow-ups.
+
+??? question "How do you convert an Observable to a Promise in current RxJS, and what happened to toPromise()?"
+
+    `firstValueFrom` and `lastValueFrom`. `toPromise()` was deprecated and removed, partly because its behavior on empty completion (resolving with `undefined`) was ambiguous; `lastValueFrom` rejects with `EmptyError` instead, making the empty case explicit.
+
+??? question "Can a Promise be cancelled?"
+
+    Not by the Promise API itself. You can abort the underlying operation with `AbortController` (for `fetch`), which rejects the promise, but the promise abstraction has no unsubscribe. Observables build cancellation into the model: unsubscribing runs producer teardown, which is how `HttpClient` aborts requests under `switchMap`.
+
+## Next Up
+
+- [Cold Observables](cold-observables.md): laziness and per-subscriber execution in depth
+- [from](../operators/creation/from.md): bringing promises into RxJS pipelines
+- [switchMap](../operators/transformation/switchMap.md): cancellation put to work

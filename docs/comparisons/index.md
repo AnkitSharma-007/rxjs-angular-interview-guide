@@ -10,7 +10,7 @@ Interviewers rarely ask "what does `switchMap` do?" in isolation. They ask "when
 
 ## Available comparisons
 
-- **[switchMap vs mergeMap vs concatMap](switchMap-mergeMap-concatMap.md)**: the higher-order mapping strategies. Cancellation vs concurrency vs strict ordering, and which real scenarios call for each.
+- **[switchMap vs mergeMap vs concatMap vs exhaustMap](switchMap-mergeMap-concatMap.md)**: the higher-order mapping strategies. Cancellation vs concurrency vs strict ordering vs ignore-while-busy, and which real scenarios call for each.
 - **[Subject vs BehaviorSubject vs ReplaySubject](subject-behaviorSubject-replaySubject.md)**: what a new subscriber receives from each Subject type and how to choose.
 
 ## Related quick reads

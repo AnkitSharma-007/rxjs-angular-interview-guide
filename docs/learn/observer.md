@@ -13,7 +13,7 @@ Think of it like this:
 - **Observable:** The radio station broadcasting music (the stream).
 - **Observer:** Your radio receiver at home, which _listens_ to the broadcast and plays the music through its speakers (consumes the stream).
 
-### Structure of an Observer:
+## Structure of an Observer
 
 An Observer is typically an object literal (a plain JavaScript object) that can have up to three methods (or "callbacks"):
 
@@ -33,56 +33,78 @@ You are the **Observer** watching the delivery app.
 - **`error(problem)`:** Your action when you see "Order Cancelled by Restaurant". You might feel annoyed (`console.error(problem)`) and decide to order from somewhere else (`this.showError('Order failed: ' + problem)`).
 - **`complete()`:** Your action when you see "Delivered". You might think, "Great, food's here!" (`console.log('Food has arrived!')`).
 
-### Code Example (using the previous `HttpClient` example):
+## Code Example (using the previous `HttpClient` example)
 
-In the `MyComponentComponent` example from before, the object we passed to `this.dataSubscription = this.dataService.getItems().subscribe(...)` _is_ the Observer:
+In the `MyComponentComponent` example from before, the object we passed to `subscribe(...)` _is_ the Observer:
 
 ```typescript
-// ... inside ngOnInit() of MyComponentComponent ...
+// ... inside the component's constructor ...
 
-this.dataSubscription = this.dataService.getItems().subscribe(
-  // This object is the Observer
-  {
-    // Handler for new data values
-    next: (data) => {
-      this.items = data;
-      console.log("Data received:", data);
+this.dataService
+  .getItems()
+  .pipe(takeUntilDestroyed())
+  .subscribe(
+    // This object is the Observer
+    {
+      // Handler for new data values
+      next: (data) => {
+        this.items.set(data);
+        console.log("Data received:", data);
+      },
+      // Handler for errors
+      error: (error) => {
+        this.errorMsg.set("Failed to load items.");
+        console.error("Error fetching items:", error);
+      },
+      // Handler for completion
+      complete: () => {
+        console.log("Finished fetching items.");
+      },
     },
-    // Handler for errors
-    error: (error) => {
-      this.errorMsg = "Failed to load items.";
-      console.error("Error fetching items:", error);
-    },
-    // Handler for completion
-    complete: () => {
-      console.log("Finished fetching items.");
-    },
-  },
-);
+  );
 ```
 
 **Simplified Syntax:**
 
-You don't always need to provide all three methods. RxJS allows you to pass callback functions directly to `subscribe()`:
+You don't always need to provide all three handlers:
 
-- **Just `next`:**
+- **Just `next`:** passing a single function is shorthand for `{ next: fn }`:
+
   ```typescript
   myObservable.subscribe((data) => console.log(data));
   ```
-- **`next` and `error`:**
+
+- **Any other combination:** use a partial observer object and include only the handlers you need:
+
   ```typescript
-  myObservable.subscribe(
-    (data) => console.log(data), // next handler
-    (err) => console.error(err), // error handler
-  );
-  ```
-- **`next`, `error`, and `complete`:**
-  ```typescript
-  myObservable.subscribe(
-    (data) => console.log(data), // next handler
-    (err) => console.error(err), // error handler
-    () => console.log("Done!"), // complete handler
-  );
+  myObservable.subscribe({
+    next: (data) => console.log(data),
+    error: (err) => console.error(err),
+  });
   ```
 
+!!! warning "Deprecated: multiple callback arguments"
+
+    The old `subscribe(nextFn, errorFn, completeFn)` signature with separate callback arguments is deprecated in RxJS and slated for removal. Always pass either a single `next` function or an observer object, as shown above. Interviewers sometimes probe exactly this.
+
 So, in short: The **Observer** is the set of callbacks (next, error, complete) that you provide to the `subscribe()` method to react to the values and notifications emitted by an **Observable**.
+
+## Interview Q&A
+
+??? question "Are all three Observer handlers required?"
+
+    No. All handlers are optional; a partial observer (`{ next }`, `{ next, error }`) is normal, and a bare function is shorthand for `{ next }`. Omitting `error` is risky though: an unhandled stream error surfaces as a runtime exception.
+
+??? question "Can next be called after error or complete?"
+
+    No. The Observable contract guarantees that after a terminal notification (`error` or `complete`), no further notifications of any kind are delivered to that subscriber. Operators and Subjects all enforce this.
+
+??? question "What is the relationship between Observer and Subscriber?"
+
+    A Subscriber is RxJS's internal wrapper around your Observer: it adds subscription bookkeeping (teardown, closed state) and enforces the contract. Conceptually, you write Observers; RxJS runs them as Subscribers.
+
+## Next Up
+
+- [Cold Observables](cold-observables.md): why each subscription can trigger fresh work
+- [Hot Observables](hot-observables.md): shared live streams
+- [Subject](../subjects/subject.md): an object that is both Observable and Observer
