@@ -1,3 +1,10 @@
+---
+description: "Complete a stream when a notifier emits: the classic unsubscribe pattern."
+tags:
+  - Operators
+  - Filtering
+---
+
 # takeUntil
 
 `takeUntil()` is an RxJS operator primarily used for managing the lifetime of an Observable stream, effectively acting as a **completion operator**. It mirrors the source Observable, allowing its values to pass through, **until** a second Observable, called the `notifier`, emits its first value or completes.
@@ -44,29 +51,29 @@ export class TakeUntilDemoComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     console.log(
-      `[${new Date().toLocaleTimeString()}] Component Init - Starting Interval`
+      `[${new Date().toLocaleTimeString()}] Component Init - Starting Interval`,
     );
     interval(1000)
       .pipe(
         tap((count) =>
           console.log(
-            `[${new Date().toLocaleTimeString()}] Interval emitted: ${count}`
-          )
+            `[${new Date().toLocaleTimeString()}] Interval emitted: ${count}`,
+          ),
         ),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
       )
       .subscribe({
         next: (count) => (this.currentCount = count),
         complete: () =>
           console.log(
-            `[${new Date().toLocaleTimeString()}] Interval stream completed via takeUntil.`
+            `[${new Date().toLocaleTimeString()}] Interval stream completed via takeUntil.`,
           ),
       });
   }
 
   ngOnDestroy(): void {
     console.log(
-      `[${new Date().toLocaleTimeString()}] Component Destroy - Signaling takeUntil`
+      `[${new Date().toLocaleTimeString()}] Component Destroy - Signaling takeUntil`,
     );
     this.destroy$.next();
     this.destroy$.complete();

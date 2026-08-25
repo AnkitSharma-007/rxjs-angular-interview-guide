@@ -1,3 +1,12 @@
+---
+description: "Pair values from multiple streams by index."
+tags:
+  - Operators
+  - Combination
+---
+
+# zip
+
 The `zip()` operator in RxJS is a **combination operator**. Its job is to combine multiple source Observables by waiting for each observable to emit a value at the **same index**, and then it emits an array containing those values paired together.
 
 ## Analogy: The Zipper
@@ -69,14 +78,14 @@ export class ZipExampleComponent implements OnInit {
     // Source 2: Emits 10, 20, 30, 40 every 500ms
     const numbers$ = interval(500).pipe(
       map((i) => (i + 1) * 10), // Map index 0, 1, 2, 3 to 10, 20, 30, 40
-      take(4) // Only take the first 4 values
+      take(4), // Only take the first 4 values
     );
 
     // Zip them together
     zip(letters$, numbers$)
       .pipe(
         // zip emits arrays like [string, number]
-        takeUntilDestroyed(this.destroyRef) // Auto-unsubscribe
+        takeUntilDestroyed(this.destroyRef), // Auto-unsubscribe
       )
       .subscribe({
         next: (value) => {

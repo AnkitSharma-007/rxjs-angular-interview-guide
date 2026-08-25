@@ -1,3 +1,10 @@
+---
+description: "Wait for all streams to complete, then emit their final values together."
+tags:
+  - Operators
+  - Combination
+---
+
 # forkJoin
 
 `forkJoin()` is used when you have a group of Observables (often representing asynchronous operations like API calls) and you want to wait until **all** of them have **completed** before you get the results.
@@ -39,7 +46,7 @@ const failing$ = timer(1500).pipe(
   delay(100), // Add small delay just for simulation
   map(() => {
     throw new Error("Network Error");
-  }) // Simulate error
+  }), // Simulate error
 );
 
 // --- Without error handling inside ---
@@ -55,7 +62,7 @@ const failingHandled$ = failing$.pipe(
     console.warn(`Caught error in stream: ${error.message}. Returning null.`);
     // Return an Observable that emits a fallback value and COMPLETES
     return of(null);
-  })
+  }),
 );
 
 forkJoin([successful$, failingHandled$]).subscribe({
@@ -137,7 +144,7 @@ export class ProfilePageComponent implements OnInit {
         console.error("Failed to load Profile", err);
         // Return fallback and let forkJoin continue
         return of(null);
-      })
+      }),
     );
 
     const preferences$ = this.http
@@ -147,7 +154,7 @@ export class ProfilePageComponent implements OnInit {
           console.error("Failed to load Preferences", err);
           // Return fallback and let forkJoin continue
           return of(null);
-        })
+        }),
       );
 
     const notifications$ = this.http
@@ -157,7 +164,7 @@ export class ProfilePageComponent implements OnInit {
           console.error("Failed to load Notifications", err);
           // Return fallback and let forkJoin continue
           return of({ count: 0, messages: [] }); // Example fallback
-        })
+        }),
       );
 
     // Use forkJoin to wait for all requests
@@ -188,7 +195,7 @@ export class ProfilePageComponent implements OnInit {
         console.error("Unexpected error in forkJoin:", err);
         this.errorMsg = "An unexpected error occurred while loading data.";
         this.isLoading = false;
-      }
+      },
     );
   }
 }

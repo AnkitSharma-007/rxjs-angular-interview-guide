@@ -1,3 +1,12 @@
+---
+description: "Error out if the source stays silent longer than a limit."
+tags:
+  - Operators
+  - Utility
+---
+
+# timeout
+
 The `timeout` operator sets a time limit. If the source Observable doesn't emit its **first value** or **complete** within that specified duration, the `timeout` operator will cause the stream to **emit a `TimeoutError`** and terminate.
 
 Think of it like setting an **egg timer** for an operation:
@@ -45,14 +54,14 @@ export interface ExternalData {
 export class SlowDataService {
   fetchData(id: string, responseTimeMs: number): Observable<ExternalData> {
     console.log(
-      `Backend: Request received for ID ${id}. Will respond in ${responseTimeMs}ms.`
+      `Backend: Request received for ID ${id}. Will respond in ${responseTimeMs}ms.`,
     );
     const data: ExternalData = { id: id, value: Math.random() * 100 };
 
     // Simulate the delay
     return of(data).pipe(
       delay(responseTimeMs),
-      tap(() => console.log(`Backend: Responding for ID ${id}.`))
+      tap(() => console.log(`Backend: Responding for ID ${id}.`)),
     );
   }
 }
@@ -89,14 +98,16 @@ import { EMPTY, TimeoutError } from "rxjs"; // Import TimeoutError and EMPTY
       </button>
 
       @if (loading()) {
-      <p class="status loading">Loading data (Timeout set to 5s)...</p>
-      } @if (errorMessage()) {
-      <p class="status error">Error: {{ errorMessage() }}</p>
-      } @if (fetchedData()) {
-      <div class="data">
-        <p>Data Received:</p>
-        <pre>{{ fetchedData() | json }}</pre>
-      </div>
+        <p class="status loading">Loading data (Timeout set to 5s)...</p>
+      }
+      @if (errorMessage()) {
+        <p class="status error">Error: {{ errorMessage() }}</p>
+      }
+      @if (fetchedData()) {
+        <div class="data">
+          <p>Data Received:</p>
+          <pre>{{ fetchedData() | json }}</pre>
+        </div>
       }
     </div>
   `,
@@ -121,7 +132,7 @@ export class DataFetcherComponent {
     this.fetchedData.set(null);
     this.errorMessage.set(null);
     console.log(
-      `UI: Initiating fetch. Response expected in ${responseTimeMs}ms. Timeout is ${this.apiTimeoutMs}ms.`
+      `UI: Initiating fetch. Response expected in ${responseTimeMs}ms. Timeout is ${this.apiTimeoutMs}ms.`,
     );
 
     this.dataService
@@ -129,8 +140,8 @@ export class DataFetcherComponent {
       .pipe(
         tap((data) =>
           console.log(
-            "UI Stream: Data received (before timeout check completed)"
-          )
+            "UI Stream: Data received (before timeout check completed)",
+          ),
         ),
 
         // --- Apply the timeout ---
@@ -143,12 +154,12 @@ export class DataFetcherComponent {
           if (err instanceof TimeoutError) {
             console.error("Error Type: TimeoutError");
             this.errorMessage.set(
-              `Operation timed out after ${this.apiTimeoutMs / 1000} seconds.`
+              `Operation timed out after ${this.apiTimeoutMs / 1000} seconds.`,
             );
           } else {
             console.error("Error Type: Other", err);
             this.errorMessage.set(
-              `An unexpected error occurred: ${err.message || err}`
+              `An unexpected error occurred: ${err.message || err}`,
             );
           }
           // Return EMPTY to allow finalize to run
@@ -157,10 +168,10 @@ export class DataFetcherComponent {
         finalize(() => {
           this.loading.set(false);
           console.log(
-            "UI: Finalize block executed - Loading state set to false."
+            "UI: Finalize block executed - Loading state set to false.",
           );
         }),
-        takeUntilDestroyed(this.destroyRef)
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (data) => {

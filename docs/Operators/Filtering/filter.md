@@ -1,3 +1,10 @@
+---
+description: "Only pass values that satisfy a predicate."
+tags:
+  - Operators
+  - Filtering
+---
+
 # filter
 
 The `filter()` operator is, as the name suggests, a **filtering operator**. It looks at each value emitted by the source Observable and applies a condition check – called a **predicate function** – to it.

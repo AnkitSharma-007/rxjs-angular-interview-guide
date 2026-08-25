@@ -1,3 +1,11 @@
+---
+description: "Share one subscription to a source Observable among all subscribers."
+tags:
+  - Multicasting
+---
+
+# share
+
 Like `shareReplay`, the `share` operator is used to share a _single_ subscription to an underlying source Observable among multiple downstream subscribers. This prevents the source Observable's logic (e.g., setting up an interval, making a connection) from executing multiple times.
 
 However, `share` behaves like it's using a plain `Subject` internally for multicasting. This means:
@@ -56,13 +64,13 @@ export class SharedTimerService {
       tap((tick) =>
         console.log(
           `%c --- Source Interval Emitted: ${tick} --- `,
-          "background: #eee; color: #999"
-        )
+          "background: #eee; color: #999",
+        ),
       ),
       // --- Key Operator ---
       // Share this single interval subscription among all subscribers.
       // No replay for late subscribers.
-      share()
+      share(),
       // --------------------
       // Note: share() is roughly equivalent to:
       // multicast(() => new Subject()), // Use a plain Subject (no replay)

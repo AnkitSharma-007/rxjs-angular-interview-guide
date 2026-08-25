@@ -1,3 +1,12 @@
+---
+description: "Emit sequential numbers on a fixed timer."
+tags:
+  - Operators
+  - Creation
+---
+
+# interval
+
 `interval()` is an RxJS **creation operator** that generates an Observable which emits sequential numbers (0, 1, 2, 3, and so on) at a specified, regular time interval (in milliseconds).
 
 Think of it as setting up a metronome that ticks indefinitely, emitting the tick count each time.
@@ -38,7 +47,7 @@ import { switchMap, startWith, catchError, tap } from "rxjs/operators";
     <div *ngIf="status">
       <strong>Last Status:</strong> {{ status | json }}
       <br />
-      <em>Last Checked: {{ lastChecked | date : "mediumTime" }}</em>
+      <em>Last Checked: {{ lastChecked | date: "mediumTime" }}</em>
     </div>
     <div *ngIf="errorMessage"><strong>Error:</strong> {{ errorMessage }}</div>
   `,
@@ -56,7 +65,7 @@ export class StatusPollerComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     console.log(
-      `Starting status polling now (${new Date().toLocaleString()})...`
+      `Starting status polling now (${new Date().toLocaleString()})...`,
     );
 
     // Create an observable that emits every 5 seconds
@@ -68,7 +77,7 @@ export class StatusPollerComponent implements OnInit, OnDestroy {
         // instead of waiting for the first 5-second interval to pass.
         startWith(0), // Emit 0 immediately, then continue with interval 0, 1, 2...
         tap(() =>
-          console.log("Polling interval triggered... Fetching status.")
+          console.log("Polling interval triggered... Fetching status."),
         ),
         // For each emission from the interval, switch to making an HTTP GET request
         switchMap(() => {
@@ -85,9 +94,9 @@ export class StatusPollerComponent implements OnInit, OnDestroy {
               // Return an empty observable or throwError to stop polling if needed
               // For this example, we'll let polling continue
               return []; // Don't emit anything on error, effectively skipping this interval's update
-            })
+            }),
           );
-        })
+        }),
       )
       .subscribe({
         next: (statusData) => {

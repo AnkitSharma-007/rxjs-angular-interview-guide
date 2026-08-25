@@ -1,9 +1,17 @@
+---
+description: "Emit after a delay, then optionally keep emitting at a fixed interval."
+tags:
+  - Operators
+  - Creation
+---
+
+# timer
+
 `timer()` is an RxJS **creation operator** that creates an Observable which emits values after a specified delay, and can optionally continue emitting values at regular intervals thereafter.
 
 It behaves differently based on the arguments you provide:
 
 1.  **`timer(dueTime)`:**
-
     - Waits for the specified `dueTime` (in milliseconds, or a `Date`).
     - Emits a single value: `0`.
     - Immediately **completes**.
@@ -35,7 +43,6 @@ It behaves differently based on the arguments you provide:
 ## Real-World Example Scenarios
 
 1.  **`timer(dueTime)` Scenario: Delayed Action / Welcome Message**
-
     - Imagine you want to show a "Need help?" tooltip or a welcome message in your Angular app, but only _after_ the user has been on the page for, say, 3 seconds, giving them time to look around first. You only want this message to appear once.
 
 2.  **`timer(initialDelay, period)` Scenario: Delayed Polling**
@@ -63,7 +70,7 @@ export class DelayedMessageComponent implements OnInit {
   ngOnInit(): void {
     const messageDelay = 3000; // 3 seconds
     console.log(
-      `Component initialized at ${new Date().toLocaleTimeString()}. Setting timer for ${messageDelay}ms.`
+      `Component initialized at ${new Date().toLocaleTimeString()}. Setting timer for ${messageDelay}ms.`,
     );
 
     // Create an observable that emits 0 after 3 seconds, then completes.
@@ -73,7 +80,7 @@ export class DelayedMessageComponent implements OnInit {
       next: (value) => {
         // This will be called once with value 0 after 3 seconds
         console.log(
-          `Timer emitted ${value} at ${new Date().toLocaleTimeString()}. Showing message.`
+          `Timer emitted ${value} at ${new Date().toLocaleTimeString()}. Showing message.`,
         );
         this.showHelpMessage = true;
       },
@@ -92,7 +99,7 @@ export class DelayedMessageComponent implements OnInit {
     if (this.timerSubscription) {
       this.timerSubscription.unsubscribe();
       console.log(
-        "Delayed message timer unsubscribed (if it was still running)."
+        "Delayed message timer unsubscribed (if it was still running).",
       );
     }
   }
@@ -117,7 +124,7 @@ import { switchMap, catchError, tap } from "rxjs/operators";
     <div *ngIf="status">
       <strong>Last Status:</strong> {{ status | json }}
       <br />
-      <em>Last Checked: {{ lastChecked | date : "mediumTime" }}</em>
+      <em>Last Checked: {{ lastChecked | date: "mediumTime" }}</em>
     </div>
     <div *ngIf="errorMessage"><strong>Error:</strong> {{ errorMessage }}</div>
   `,
@@ -137,7 +144,7 @@ export class DelayedPollerComponent implements OnInit, OnDestroy {
     console.log(
       `Starting delayed polling now (${new Date().toLocaleString()}). Initial delay: ${
         this.INITIAL_DELAY_MS
-      }ms, Period: ${this.POLLING_PERIOD_MS}ms.`
+      }ms, Period: ${this.POLLING_PERIOD_MS}ms.`,
     );
 
     // Create timer: waits 5s, emits 0, then emits 1, 2,... every 10s
@@ -146,7 +153,7 @@ export class DelayedPollerComponent implements OnInit, OnDestroy {
     this.pollingSubscription = pollingTimer$
       .pipe(
         tap((count) =>
-          console.log(`Polling timer emitted ${count}. Fetching status.`)
+          console.log(`Polling timer emitted ${count}. Fetching status.`),
         ),
         // Switch to HTTP request on each timer emission
         switchMap((count) => {
@@ -155,16 +162,16 @@ export class DelayedPollerComponent implements OnInit, OnDestroy {
             catchError((error) => {
               console.error(
                 `Error fetching status (emission ${count}):`,
-                error
+                error,
               );
               this.errorMessage = `Failed to fetch status (${
                 error.statusText || "Unknown Error"
               })`;
               this.status = null;
               return []; // Continue polling even after error
-            })
+            }),
           );
-        })
+        }),
       )
       .subscribe({
         next: (statusData) => {

@@ -1,3 +1,12 @@
+---
+description: "Shift emissions forward in time."
+tags:
+  - Operators
+  - Utility
+---
+
+# delay
+
 The `delay` operator simply **shifts the emission** of each notification (`next`, `error`, `complete`) from its source Observable forward in time by a specified duration.
 
 Think of it like **scheduled mail delivery:**
@@ -53,8 +62,8 @@ function mockSaveOperation(): Observable<{
     delay(100), // Simulate VERY FAST network/backend time (100ms)
     tap((success) =>
       console.log(
-        `Backend: Simulated save ${success ? "successful" : "failed"}.`
-      )
+        `Backend: Simulated save ${success ? "successful" : "failed"}.`,
+      ),
     ),
     switchMap((success) => {
       if (success) {
@@ -64,10 +73,10 @@ function mockSaveOperation(): Observable<{
         return timer(50).pipe(
           switchMap(() => {
             throw new Error("Save failed due to backend validation.");
-          })
+          }),
         );
       }
-    })
+    }),
   );
 }
 
@@ -81,15 +90,15 @@ function mockSaveOperation(): Observable<{
       <button (click)="saveData()" [disabled]="saving()">Save Data</button>
 
       @if (saving()) {
-      <p class="status saving">Saving...</p>
+        <p class="status saving">Saving...</p>
       } @else if (statusMessage()) {
-      <p
-        class="status"
-        [class.success]="isSuccess()"
-        [class.error]="!isSuccess()"
-      >
-        {{ statusMessage() }}
-      </p>
+        <p
+          class="status"
+          [class.success]="isSuccess()"
+          [class.error]="!isSuccess()"
+        >
+          {{ statusMessage() }}
+        </p>
       }
     </div>
   `,
@@ -140,7 +149,7 @@ export class SaveStatusComponent {
           this.saving.set(false);
         }),
         // Automatically unsubscribe when the component is destroyed
-        takeUntilDestroyed(this.destroyRef)
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (result) => {
@@ -149,8 +158,8 @@ export class SaveStatusComponent {
           this.isSuccess.set(true);
           this.statusMessage.set(
             `Saved successfully at ${new Date(
-              result.timestamp
-            ).toLocaleTimeString()}`
+              result.timestamp,
+            ).toLocaleTimeString()}`,
           );
         },
         // Error is handled in catchError

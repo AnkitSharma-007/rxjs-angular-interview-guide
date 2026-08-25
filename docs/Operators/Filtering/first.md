@@ -1,3 +1,10 @@
+---
+description: "Emit the first (matching) value, then complete."
+tags:
+  - Operators
+  - Filtering
+---
+
 # first
 
 The `first()` operator is used to get **only the first value** emitted by a source Observable that meets an optional condition. After emitting that single value, it immediately **completes** the stream.
@@ -56,11 +63,11 @@ export class FirstDemoComponent implements OnInit {
       timer(1000).pipe(map(() => "pending")),
       timer(1500).pipe(map(() => "active")), // First 'active' here
       timer(2000).pipe(map(() => "pending")),
-      timer(2500).pipe(map(() => "inactive"))
+      timer(2500).pipe(map(() => "inactive")),
     );
 
     console.log(
-      `[${new Date().toLocaleTimeString()}] Subscribing to find first 'active' status...`
+      `[${new Date().toLocaleTimeString()}] Subscribing to find first 'active' status...`,
     );
 
     statusUpdates$
@@ -69,30 +76,30 @@ export class FirstDemoComponent implements OnInit {
         catchError((error) => {
           if (error instanceof EmptyError) {
             console.warn(
-              `[${new Date().toLocaleTimeString()}] No 'active' status found before stream completed.`
+              `[${new Date().toLocaleTimeString()}] No 'active' status found before stream completed.`,
             );
             this.resultStatus = "No active status found.";
             return EMPTY;
           } else {
             console.error(
               `[${new Date().toLocaleTimeString()}] Stream error:`,
-              error
+              error,
             );
             this.resultStatus = `Error: ${error.message}`;
             return throwError(() => error);
           }
-        })
+        }),
       )
       .subscribe({
         next: (activeStatus) => {
           console.log(
-            `[${new Date().toLocaleTimeString()}] Found first active status: ${activeStatus}`
+            `[${new Date().toLocaleTimeString()}] Found first active status: ${activeStatus}`,
           );
           this.resultStatus = `First active status: ${activeStatus}`;
         },
         complete: () => {
           console.log(
-            `[${new Date().toLocaleTimeString()}] Stream completed by first().`
+            `[${new Date().toLocaleTimeString()}] Stream completed by first().`,
           );
           // Note: resultStatus might already be set by next or catchError
           if (this.resultStatus === "Waiting...") {

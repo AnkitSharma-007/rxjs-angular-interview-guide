@@ -1,3 +1,12 @@
+---
+description: "Ignore the first N emissions."
+tags:
+  - Operators
+  - Filtering
+---
+
+# skip
+
 The `skip()` operator is quite straightforward: it tells an Observable stream to simply **ignore the first `N` values** it emits. After skipping the specified number of items, it will then allow all subsequent emissions to pass through normally.
 
 Think of it as telling someone to start counting _after_ a certain number. If you say `skip(3)`, you're essentially saying "Ignore the 1st, 2nd, and 3rd things that happen, but tell me about the 4th, 5th, 6th, and so on."

@@ -1,3 +1,12 @@
+---
+description: "Intercept stream errors and recover with a fallback Observable or rethrow."
+tags:
+  - Operators
+  - Error Handling
+---
+
+# catchError
+
 `catchError()` is an RxJS operator used for **graceful error handling** within an Observable stream. When an error occurs in the source Observable (or in any preceding operators in the `pipe`), `catchError` intercepts that error notification. It gives you a chance to:
 
 1.  **Analyze the error:** Log it, send it to a monitoring service, etc.
@@ -76,7 +85,7 @@ export class UserProfileComponent implements OnInit {
 
     this.fetchUserData(this.userId)
       .pipe(
-        takeUntilDestroyed(this.destroyRef) // Auto-unsubscribe on destroy
+        takeUntilDestroyed(this.destroyRef), // Auto-unsubscribe on destroy
       )
       .subscribe({
         next: (userData) => {
@@ -122,7 +131,7 @@ export class UserProfileComponent implements OnInit {
           this.errorMsg.set(`User with ID ${id} not found.`);
         } else if (error.status === 0 || error.status >= 500) {
           this.errorMsg.set(
-            "Server error or network issue. Please try again later."
+            "Server error or network issue. Please try again later.",
           );
         } else {
           this.errorMsg.set(`An error occurred: ${error.message}`);
@@ -140,7 +149,7 @@ export class UserProfileComponent implements OnInit {
         // this.errorMsg.set('Failed to load user data. Error propagated.'); // Set msg here or in subscribe error block
         // this.loading.set(false);
         // return throwError(() => new Error(`Failed fetching user ${id}: ${error.message}`)); // Propagate error to subscribe's error handler
-      })
+      }),
     );
   }
 }

@@ -1,3 +1,12 @@
+---
+description: "Map to inner Observables that run concurrently: parallel HTTP requests."
+tags:
+  - Operators
+  - Transformation
+---
+
+# mergeMap
+
 `mergeMap()` is a **higher-order mapping operator** used to handle scenarios where each value emitted by a source (outer) Observable triggers an asynchronous operation that returns another Observable (an inner Observable).
 
 Here's how it works:

@@ -1,3 +1,12 @@
+---
+description: "Automatically resubscribe after an error, with optional count and delay."
+tags:
+  - Operators
+  - Error Handling
+---
+
+# retry
+
 Imagine you're trying to do something that might fail occasionally due to temporary issues (like a shaky internet connection). The `retry` operator helps you automatically try that operation again if it fails.
 
 It subscribes to the original (source) Observable. If that Observable emits an error, instead of immediately passing the error down the chain, `retry` resubscribes to the source Observable, effectively "trying again".
@@ -49,7 +58,7 @@ export class UserService {
     console.log("Attempting to fetch user profile...");
     return this.http.get<UserData>(this.apiUrl).pipe(
       tap(() =>
-        console.log("Fetched user profile successfully on an attempt.")
+        console.log("Fetched user profile successfully on an attempt."),
       ),
       // Retry configuration:
       // count: 2 - Retry up to 2 times after the initial failure (3 total attempts).
@@ -62,13 +71,13 @@ export class UserService {
           if (error.status >= 500 || error.status === 0) {
             // Server error or network error
             console.warn(
-              `Attempt ${retryCount}: Retrying after error: ${error.message}. Waiting 1 second...`
+              `Attempt ${retryCount}: Retrying after error: ${error.message}. Waiting 1 second...`,
             );
             return timer(1000); // Use RxJS timer for delay
           } else {
             // Don't retry for client errors (4xx) or other unexpected errors
             console.error(
-              `Attempt ${retryCount}: Not retrying for error: ${error.message}`
+              `Attempt ${retryCount}: Not retrying for error: ${error.message}`,
             );
             return throwError(() => error); // Propagate the error immediately
           }
@@ -80,9 +89,9 @@ export class UserService {
         // You might want to return a user-friendly error object or re-throw
         return throwError(
           () =>
-            new Error("Could not load user profile. Please try again later.")
+            new Error("Could not load user profile. Please try again later."),
         );
-      })
+      }),
     );
   }
 }
@@ -112,17 +121,17 @@ import { EMPTY } from "rxjs"; // Import EMPTY
   template: `
     <h3>User Profile</h3>
     @if (loading()) {
-    <p>Loading user profile...</p>
+      <p>Loading user profile...</p>
     } @else if (errorMsg()) {
-    <p style="color: red;">Error: {{ errorMsg() }}</p>
+      <p style="color: red;">Error: {{ errorMsg() }}</p>
     } @else if (userProfile()) {
-    <div>
-      <p><strong>ID:</strong> {{ userProfile()?.id }}</p>
-      <p><strong>Name:</strong> {{ userProfile()?.name }}</p>
-      <p><strong>Email:</strong> {{ userProfile()?.email }}</p>
-    </div>
+      <div>
+        <p><strong>ID:</strong> {{ userProfile()?.id }}</p>
+        <p><strong>Name:</strong> {{ userProfile()?.name }}</p>
+        <p><strong>Email:</strong> {{ userProfile()?.email }}</p>
+      </div>
     } @else {
-    <p>Click the button to load profile.</p>
+      <p>Click the button to load profile.</p>
     }
 
     <button (click)="loadProfile()" [disabled]="loading()">Load Profile</button>
@@ -161,7 +170,7 @@ export class UserProfileComponent {
           // This runs whether the observable completes successfully or errors out (after retries/catchError)
           this.loading.set(false);
           console.log("Finished loading attempt (success or final error).");
-        })
+        }),
       )
       .subscribe({
         next: (data) => {

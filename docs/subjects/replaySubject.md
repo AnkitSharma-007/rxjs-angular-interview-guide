@@ -1,3 +1,11 @@
+---
+description: "A Subject that replays recent history to late subscribers."
+tags:
+  - Subjects
+---
+
+# ReplaySubject
+
 Think of a `ReplaySubject` as a `Subject` that **records** a history of the values that have passed through it. When a new Observer subscribes, the `ReplaySubject` immediately sends ("replays") a specified number of the most recent values from its recording to that new subscriber.
 
 ## Key Features
@@ -134,15 +142,15 @@ import { ActivityLogService, LogEntry } from "./activity-log.service"; // Adjust
     <div class="log-display">
       <h4>Recent Activity Log (Last {{ bufferSize }})</h4>
       @if (logMessages().length > 0) {
-      <ul>
-        @for (entry of logMessages(); track entry.timestamp) {
-        <li>
-          [{{ entry.timestamp | date : "mediumTime" }}] {{ entry.message }}
-        </li>
-        }
-      </ul>
+        <ul>
+          @for (entry of logMessages(); track entry.timestamp) {
+            <li>
+              [{{ entry.timestamp | date: "mediumTime" }}] {{ entry.message }}
+            </li>
+          }
+        </ul>
       } @else {
-      <p>No activity logged yet.</p>
+        <p>No activity logged yet.</p>
       }
     </div>
   `,
@@ -181,7 +189,7 @@ export class ActivityDisplayComponent implements OnInit {
     this.logService.logEntries$
       .pipe(
         // Automatically unsubscribe when the component is destroyed
-        takeUntilDestroyed(this.destroyRef)
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((entry) => {
         // *** Key Point ***
@@ -189,7 +197,7 @@ export class ActivityDisplayComponent implements OnInit {
         // up to 'logBufferSize' (5) entries if they were already added
         // to the ReplaySubject BEFORE this component loaded/subscribed.
         console.log(
-          `ActivityDisplayComponent received log: "${entry.message}"`
+          `ActivityDisplayComponent received log: "${entry.message}"`,
         );
 
         // Update the signal. Add new entry to the end.

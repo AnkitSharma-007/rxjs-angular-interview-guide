@@ -1,3 +1,12 @@
+---
+description: "Sample the latest value of other streams when the source emits."
+tags:
+  - Operators
+  - Combination
+---
+
+# withLatestFrom
+
 Think of `withLatestFrom()` as an operator that lets one stream (the "source") peek at the most recent value from one or more other streams whenever the source stream emits something.
 
 - **Source Stream:** This is the main Observable you attach `withLatestFrom()` to.
@@ -79,19 +88,19 @@ export class ProductSearchComponent implements OnInit {
     const searchTerm$ = this.searchTermControl.valueChanges.pipe(
       debounceTime(400), // Wait for 400ms pause in typing
       distinctUntilChanged(), // Only emit if the value actually changed
-      startWith(this.searchTermControl.value || "") // Emit initial value immediately
+      startWith(this.searchTermControl.value || ""), // Emit initial value immediately
     );
 
     // Other: Category filter
     const categoryFilter$ = this.categoryFilterControl.valueChanges.pipe(
-      startWith(this.categoryFilterControl.value || "all") // Emit initial value immediately
+      startWith(this.categoryFilterControl.value || "all"), // Emit initial value immediately
     );
 
     // --- Combining with withLatestFrom ---
     searchTerm$
       .pipe(
         withLatestFrom(categoryFilter$), // Combine search term with the LATEST category
-        takeUntilDestroyed(this.destroyRef) // Auto-unsubscribe when component is destroyed
+        takeUntilDestroyed(this.destroyRef), // Auto-unsubscribe when component is destroyed
       )
       .subscribe(([term, category]) => {
         // This block runs ONLY when searchTerm$ emits (after debounce)
@@ -102,7 +111,7 @@ export class ProductSearchComponent implements OnInit {
         const validCategory = category ?? "all";
 
         console.log(
-          `API Call Needed: Search for "${validTerm}" with filter "${validCategory}"`
+          `API Call Needed: Search for "${validTerm}" with filter "${validCategory}"`,
         );
 
         // In a real app, you'd call your API service here:

@@ -1,3 +1,10 @@
+---
+description: "Take the first N values, then complete."
+tags:
+  - Operators
+  - Filtering
+---
+
 # take
 
 `take()` is an RxJS operator that allows you to limit the number of values emitted by a source Observable. You specify a number, `N`, and `take(N)` will:

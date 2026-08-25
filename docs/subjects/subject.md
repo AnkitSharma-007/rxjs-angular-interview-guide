@@ -1,3 +1,11 @@
+---
+description: "A Subject is both Observable and Observer, and multicasts values to every subscriber."
+tags:
+  - Subjects
+---
+
+# Subject
+
 Think of a `Subject` as a special kind of Observable that acts like **both** an Observable and an Observer:
 
 1.  **As an Observable:** You can `subscribe` to it just like any other Observable to receive values it emits.
@@ -134,9 +142,11 @@ import { AuthService, User } from "./auth.service"; // Adjust path if needed
     <div class="profile-status">
       <h4>User Status</h4>
       @if (loggedInUser()) {
-      <p>Welcome, {{ loggedInUser()?.name }}! (ID: {{ loggedInUser()?.id }})</p>
+        <p>
+          Welcome, {{ loggedInUser()?.name }}! (ID: {{ loggedInUser()?.id }})
+        </p>
       } @else {
-      <p>You are currently logged out.</p>
+        <p>You are currently logged out.</p>
       }
     </div>
   `,
@@ -163,7 +173,7 @@ export class UserProfileComponent implements OnInit {
     this.authService.userLoginStatus$
       .pipe(
         // Automatically unsubscribe when the component is destroyed
-        takeUntilDestroyed(this.destroyRef)
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((user) => {
         // Update the signal when a new status is broadcast by the Subject

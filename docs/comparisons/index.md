@@ -1,3 +1,9 @@
+---
+description: "Side-by-side comparisons of commonly confused RxJS tools, condensed for quick revision."
+tags:
+  - Comparisons
+---
+
 # Comparisons
 
 Interviewers rarely ask "what does `switchMap` do?" in isolation. They ask "when would you use `switchMap` instead of `mergeMap`?" These pages put similar tools side by side so you can answer with confidence, and revise quickly before an interview.

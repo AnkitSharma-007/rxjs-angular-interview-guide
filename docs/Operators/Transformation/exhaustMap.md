@@ -1,3 +1,12 @@
+---
+description: "Ignore new values while the current inner Observable runs: double-click protection."
+tags:
+  - Operators
+  - Transformation
+---
+
+# exhaustMap
+
 `exhaustMap()` is a **higher-order mapping operator**. When it receives a value from the source (outer) Observable:
 
 1.  It checks if it's already executing an inner Observable from a _previous_ source value.

@@ -1,3 +1,12 @@
+---
+description: "Convert arrays, promises, and iterables into Observables."
+tags:
+  - Operators
+  - Creation
+---
+
+# from
+
 The `from()` operator is another **creation operator**, but its main purpose is to **convert** various other types of objects and data structures into an Observable. It's versatile and can handle things like:
 
 - Arrays (or array-like objects like `NodeList`, `arguments`)
@@ -60,11 +69,11 @@ export class UserIdProcessorComponent implements OnInit {
 
     // Example: Use RxJS operators on the stream from the array
     this.processedUserIds$ = userIdStream$.pipe(
-      map((id) => `Processed: ${id.toUpperCase()}`) // Apply an operator to each emitted ID
+      map((id) => `Processed: ${id.toUpperCase()}`), // Apply an operator to each emitted ID
     );
 
     console.log(
-      "Observable created from array. Subscribing manually for demonstration..."
+      "Observable created from array. Subscribing manually for demonstration...",
     );
 
     this.processedUserIds$.subscribe({
@@ -128,7 +137,7 @@ export class PromiseIntegratorComponent implements OnInit {
     // 3. Use the Observable in your RxJS pipeline
     this.data$ = promiseAsObservable$.pipe(
       tap((data) =>
-        console.log("Data received from promise via Observable:", data)
+        console.log("Data received from promise via Observable:", data),
       ),
       catchError((error) => {
         // Handle potential errors from the promise (fetch failure, JSON parsing error)
@@ -136,11 +145,11 @@ export class PromiseIntegratorComponent implements OnInit {
         this.errorMessage = error.message || "Failed to fetch data";
         return from([]); // Return an empty observable to prevent killing the main stream
         // Or: return throwError(() => new Error('Custom error message'));
-      })
+      }),
     );
 
     console.log(
-      "Subscribing to promise-based Observable (will resolve asynchronously)..."
+      "Subscribing to promise-based Observable (will resolve asynchronously)...",
     );
     // AsyncPipe in the template will handle the subscription here.
     // Manual subscription for logging completion:

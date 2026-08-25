@@ -1,3 +1,12 @@
+---
+description: "Create an Observable that emits the values you pass and then completes."
+tags:
+  - Operators
+  - Creation
+---
+
+# of
+
 The `of()` operator is a **creation operator**. Its job is simple: it creates an Observable that takes a sequence of arguments you provide, emits each of those arguments one after the other in the order you provided them, and then immediately **completes**.
 
 Think of it as a way to turn a fixed set of known values into an Observable stream.
@@ -41,7 +50,7 @@ export class PriorityOptionsComponent implements OnInit {
     this.priorities$ = of("Low", "Medium", "High", "Critical");
 
     console.log(
-      "Observable created with of(). Subscribing manually for demonstration..."
+      "Observable created with of(). Subscribing manually for demonstration...",
     );
 
     // Manual subscription (often handled by AsyncPipe in templates as shown above)

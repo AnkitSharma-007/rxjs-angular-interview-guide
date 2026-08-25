@@ -1,4 +1,10 @@
-# switchMap Vs mergeMap Vs concatMap
+---
+description: "Cancellation vs concurrency vs strict order: how to choose a higher-order mapping operator."
+tags:
+  - Comparisons
+---
+
+# switchMap vs mergeMap vs concatMap
 
 Let's break down the theoretical differences between `switchMap`, `mergeMap`, and `concatMap`.
 
@@ -7,7 +13,6 @@ All three are higher-order mapping operators in RxJS, meaning they map each valu
 Here’s a theoretical comparison:
 
 1.  **`switchMap`**
-
     - **Strategy:** Cancellation / Focus on Latest.
     - **Behavior:** When the source Observable emits a value, `switchMap` maps it to an inner Observable and subscribes. If the source emits a _new_ value _before_ the current inner Observable completes, `switchMap` will **unsubscribe** from the previous inner Observable (cancelling its ongoing work and discarding any potential future emissions from it) and then subscribe to the _new_ inner Observable created from the latest source value.
     - **Concurrency:** Only one inner Observable (the latest one) is active at any given time.
@@ -15,7 +20,6 @@ Here’s a theoretical comparison:
     - **Use When:** You only care about the results corresponding to the **most recent** source emission. Useful for scenarios like type-ahead search suggestions where previous requests become irrelevant.
 
 2.  **`mergeMap` (alias: `flatMap`)**
-
     - **Strategy:** Concurrency / Merging.
     - **Behavior:** When the source Observable emits a value, `mergeMap` maps it to an inner Observable and subscribes. If the source emits a _new_ value, `mergeMap` **does not cancel** any previous inner Observables. It simply creates and subscribes to the new inner Observable, allowing multiple inner Observables to run **concurrently**.
     - **Concurrency:** Can have multiple inner Observables running in parallel. The level of concurrency can optionally be limited by passing a second argument to `mergeMap`.

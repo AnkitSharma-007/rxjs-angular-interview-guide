@@ -1,3 +1,10 @@
+---
+description: "Transform each emitted value with a projection function."
+tags:
+  - Operators
+  - Transformation
+---
+
 # map
 
 The `map()` operator is a **transformation operator**. Its job is to transform each value emitted by a source Observable into a _new_ value based on a function you provide. It then emits this new, transformed value.

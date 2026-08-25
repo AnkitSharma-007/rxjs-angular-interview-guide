@@ -1,3 +1,10 @@
+---
+description: "Emit the last (matching) value when the source completes."
+tags:
+  - Operators
+  - Filtering
+---
+
 # last
 
 The `last()` operator is used to get **only the very last value** emitted by a source Observable that satisfies an optional condition, but only _after_ the source Observable **completes**.
@@ -45,7 +52,7 @@ export class LastDemoComponent implements OnInit {
     const roundScores$ = of(10, 50, 20, 100); // Finite, completes after 100
 
     console.log(
-      `[${new Date().toLocaleTimeString()}] Subscribing to get final score...`
+      `[${new Date().toLocaleTimeString()}] Subscribing to get final score...`,
     );
 
     roundScores$
@@ -54,30 +61,30 @@ export class LastDemoComponent implements OnInit {
         catchError((error) => {
           if (error instanceof EmptyError) {
             console.warn(
-              `[${new Date().toLocaleTimeString()}] Source completed without emitting values.`
+              `[${new Date().toLocaleTimeString()}] Source completed without emitting values.`,
             );
             this.finalScoreStatus = "Round completed with no scores.";
             return EMPTY;
           } else {
             console.error(
               `[${new Date().toLocaleTimeString()}] Stream error:`,
-              error
+              error,
             );
             this.finalScoreStatus = `Error: ${error.message}`;
             return throwError(() => error);
           }
-        })
+        }),
       )
       .subscribe({
         next: (finalScore) => {
           console.log(
-            `[${new Date().toLocaleTimeString()}] Final score received: ${finalScore}`
+            `[${new Date().toLocaleTimeString()}] Final score received: ${finalScore}`,
           );
           this.finalScoreStatus = `Final Score: ${finalScore}`;
         },
         complete: () => {
           console.log(
-            `[${new Date().toLocaleTimeString()}] Stream completed by last().`
+            `[${new Date().toLocaleTimeString()}] Stream completed by last().`,
           );
         },
       });

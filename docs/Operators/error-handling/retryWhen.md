@@ -1,3 +1,12 @@
+---
+description: "Deprecated operator for custom retry logic; prefer retry with a config object."
+tags:
+  - Operators
+  - Error Handling
+---
+
+# retryWhen
+
 > **⚠️ Deprecated:** `retryWhen` is deprecated in RxJS and slated for removal. Prefer the [`retry`](retry.md) operator with a configuration object (`retry({ count, delay })`), which handles the same scenarios, including the exponential backoff shown below, with simpler code. This page is kept for interview awareness and for maintaining older codebases.
 
 `retryWhen` gives you full control over the retry logic based on the errors that occur. Unlike `retry(n)`, which just retries immediately or with a simple configured delay, `retryWhen` lets you look at the sequence of errors and decide _if_ and _when_ to retry.

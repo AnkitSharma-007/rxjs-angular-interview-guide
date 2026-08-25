@@ -1,3 +1,12 @@
+---
+description: "Run cleanup when a stream completes, errors, or is unsubscribed."
+tags:
+  - Operators
+  - Utility
+---
+
+# finalize
+
 The `finalize` operator lets you specify a callback function that will be executed **when the source Observable terminates**. Termination happens in one of three ways:
 
 1.  The Observable **completes** successfully (sends its last value and the `complete` notification).
@@ -56,7 +65,7 @@ interface Product {
 }
 
 function mockFetchProducts(
-  failRequest: boolean = false
+  failRequest: boolean = false,
 ): Observable<Product[]> {
   console.log("Backend: Starting simulated product fetch...");
   if (failRequest) {
@@ -65,7 +74,7 @@ function mockFetchProducts(
       tap(() => console.log("Backend: Simulating network error...")),
       switchMap(() => {
         throw new Error("Network Error: Failed to connect to server.");
-      })
+      }),
     );
   } else {
     // Simulate a successful response with delay
@@ -75,7 +84,7 @@ function mockFetchProducts(
     ];
     return of(products).pipe(
       delay(1500), // Simulate network latency
-      tap(() => console.log("Backend: Simulated fetch successful."))
+      tap(() => console.log("Backend: Simulated fetch successful.")),
     );
   }
 }
@@ -96,17 +105,19 @@ function mockFetchProducts(
       </button>
 
       @if (loading()) {
-      <p class="status loading">Loading products...</p>
-      } @if (errorMessage()) {
-      <p class="status error">Error: {{ errorMessage() }}</p>
-      } @if (products().length > 0 && !loading()) {
-      <ul>
-        @for(product of products(); track product.id) {
-        <li>{{ product.name }} - {{ product.price | currency }}</li>
-        }
-      </ul>
+        <p class="status loading">Loading products...</p>
+      }
+      @if (errorMessage()) {
+        <p class="status error">Error: {{ errorMessage() }}</p>
+      }
+      @if (products().length > 0 && !loading()) {
+        <ul>
+          @for (product of products(); track product.id) {
+            <li>{{ product.name }} - {{ product.price | currency }}</li>
+          }
+        </ul>
       } @else if (!loading() && !errorMessage()) {
-      <p>Click button to load.</p>
+        <p>Click button to load.</p>
       }
     </div>
   `,
@@ -131,7 +142,7 @@ export class ProductListComponent {
     mockFetchProducts(simulateError)
       .pipe(
         tap((data) =>
-          console.log("UI Stream: Received product data (before finalize)")
+          console.log("UI Stream: Received product data (before finalize)"),
         ),
         catchError((err: Error) => {
           console.error("UI Stream: Error caught:", err.message);
@@ -145,11 +156,11 @@ export class ProductListComponent {
         finalize(() => {
           this.loading.set(false); // <-- Stop Loading Indicator
           console.log(
-            "UI: Finalize block executed - Loading state set to false."
+            "UI: Finalize block executed - Loading state set to false.",
           );
         }),
         // --------------------
-        takeUntilDestroyed(this.destroyRef) // Ensure unsubscription on destroy
+        takeUntilDestroyed(this.destroyRef), // Ensure unsubscription on destroy
       )
       .subscribe({
         next: (data) => {

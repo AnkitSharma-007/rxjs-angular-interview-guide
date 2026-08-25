@@ -1,3 +1,10 @@
+---
+description: "Drop consecutive duplicate values."
+tags:
+  - Operators
+  - Filtering
+---
+
 # distinctUntilChanged
 
 `distinctUntilChanged()` is a straightforward yet very useful **filtering operator**. Its purpose is to prevent consecutive duplicate values from passing through an Observable stream.
@@ -84,15 +91,15 @@ export class DistinctSearchReactiveComponent implements OnInit, OnDestroy {
         tap((value) => {
           this.currentTime = new Date().toLocaleTimeString();
           console.log(
-            `    [${this.currentTime}] Distinct: "${value}" -> Triggering Search!`
+            `    [${this.currentTime}] Distinct: "${value}" -> Triggering Search!`,
           );
-        })
+        }),
       )
       .subscribe({
         next: (searchTerm) => {
           const termStr = searchTerm ?? "";
           this.searchLog.push(
-            `[${new Date().toLocaleTimeString()}] "${termStr}"`
+            `[${new Date().toLocaleTimeString()}] "${termStr}"`,
           );
           if (this.searchLog.length > 10) this.searchLog.shift();
           // API call placeholder

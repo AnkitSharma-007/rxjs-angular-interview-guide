@@ -1,3 +1,11 @@
+---
+description: "Share one subscription and replay the latest values: the HTTP caching operator."
+tags:
+  - Multicasting
+---
+
+# shareReplay
+
 Imagine you have an Observable that does some expensive work when someone subscribes (like making an HTTP request). If multiple parts of your application subscribe to this _same_ Observable independently, the expensive work will happen _multiple times_ (multiple identical HTTP requests!).
 
 `shareReplay` solves this by:
@@ -67,14 +75,14 @@ export class ConfigService {
       tap(() =>
         console.log(
           "%c Fetching application config from API... ",
-          "background: #ffcc00; color: black;"
-        )
+          "background: #ffcc00; color: black;",
+        ),
       ),
       // --- Key Operator ---
       shareReplay({
         bufferSize: 1, // Cache and replay the single config object
         refCount: true, // Unsubscribe from HTTP when no components are listening
-      })
+      }),
       // --------------------
     );
 
@@ -113,10 +121,10 @@ import { ConfigService, AppConfig } from "./config.service"; // Adjust path
     <div class="component-box">
       <h4>Component A</h4>
       @if (config()) {
-      <p>API URL: {{ config()?.apiUrl }}</p>
-      <p>Theme: {{ config()?.theme }}</p>
+        <p>API URL: {{ config()?.apiUrl }}</p>
+        <p>Theme: {{ config()?.theme }}</p>
       } @else {
-      <p>Loading config...</p>
+        <p>Loading config...</p>
       }
     </div>
   `,
@@ -166,15 +174,15 @@ import { ConfigService, AppConfig } from "./config.service"; // Adjust path
     <div class="component-box" style="border-color: green;">
       <h4>Component B</h4>
       @if (config()) {
-      <p>
-        New Dashboard Feature:
-        {{ config()?.featureFlags?.newDashboard ? "ENABLED" : "DISABLED" }}
-      </p>
-      <p>
-        Beta Testing: {{ config()?.featureFlags?.betaTesting ? "ON" : "OFF" }}
-      </p>
+        <p>
+          New Dashboard Feature:
+          {{ config()?.featureFlags?.newDashboard ? "ENABLED" : "DISABLED" }}
+        </p>
+        <p>
+          Beta Testing: {{ config()?.featureFlags?.betaTesting ? "ON" : "OFF" }}
+        </p>
       } @else {
-      <p>Loading config...</p>
+        <p>Loading config...</p>
       }
     </div>
   `,

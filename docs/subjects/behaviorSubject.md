@@ -1,3 +1,11 @@
+---
+description: "A Subject with a current value that every new subscriber receives immediately."
+tags:
+  - Subjects
+---
+
+# BehaviorSubject
+
 A `BehaviorSubject` is a special type of `Subject` with two key distinctions:
 
 1.  **Requires an Initial Value:** You _must_ provide a starting value when you create a `BehaviorSubject`.
@@ -174,7 +182,7 @@ export class ThemedContentComponent implements OnInit {
     this.themeService.theme$
       .pipe(
         // Automatically unsubscribe when the component is destroyed
-        takeUntilDestroyed(this.destroyRef)
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((theme) => {
         // *** Key Point ***

@@ -1,3 +1,9 @@
+---
+description: "The main RxJS operator categories and what each family is for."
+tags:
+  - Operators
+---
+
 # RxJS Operators
 
 RxJS operators are functions that enable you to manipulate, combine, filter, and transform the data streams (Observables) in powerful ways. They take an Observable as input and return a new Observable.

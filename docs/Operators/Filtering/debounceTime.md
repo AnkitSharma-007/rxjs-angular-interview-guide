@@ -1,3 +1,12 @@
+---
+description: "Wait for a pause in emissions before passing the latest value: rate-limit typing."
+tags:
+  - Operators
+  - Filtering
+---
+
+# debounceTime
+
 `debounceTime()` is a rate-limiting operator in RxJS. It helps control how often values are emitted from a source Observable, especially when the source emits values very rapidly.
 
 Think of it like this: `debounceTime()` waits for a **pause** in the emissions from the source. When the source emits a value, `debounceTime` starts a timer for a specified duration (let's say `X` milliseconds).
@@ -114,7 +123,7 @@ export class EfficientSearchComponent implements OnInit {
             console.error("API Search Error:", err);
             this.errorMsg = "Search failed. Please try again.";
             return of([]); // Return empty on error
-          })
+          }),
         );
       }),
 
@@ -124,7 +133,7 @@ export class EfficientSearchComponent implements OnInit {
       }),
 
       // 6. AUTOCLEANUP: Ensure subscription is managed
-      takeUntilDestroyed(this.destroyRef)
+      takeUntilDestroyed(this.destroyRef),
     );
   }
 

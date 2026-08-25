@@ -1,3 +1,12 @@
+---
+description: "Run side effects like logging without changing the stream."
+tags:
+  - Operators
+  - Utility
+---
+
+# tap
+
 The `tap` operator lets you perform **side effects** for notifications (`next`, `error`, `complete`) emitted by an Observable. A "side effect" is an action that doesn't directly modify the value passing through the stream itself.
 
 Think of it like this: Data is flowing down a pipe (your Observable stream). `tap` allows you to attach a sensor to the side of the pipe. This sensor can:
@@ -85,16 +94,16 @@ import { EMPTY, Observable } from "rxjs"; // Import EMPTY
     </button>
 
     @if (loading()) {
-    <p>Loading user data...</p>
+      <p>Loading user data...</p>
     } @else if (errorMessage()) {
-    <p style="color: red;">Error: {{ errorMessage() }}</p>
+      <p style="color: red;">Error: {{ errorMessage() }}</p>
     } @else if (user()) {
-    <div>
-      <h4>{{ user()?.name }}</h4>
-      <p>ID: {{ user()?.id }}</p>
-    </div>
+      <div>
+        <h4>{{ user()?.name }}</h4>
+        <p>ID: {{ user()?.id }}</p>
+      </div>
     } @else {
-    <p>Click a button to load user data.</p>
+      <p>Click a button to load user data.</p>
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -119,7 +128,7 @@ export class UserProfileComponent {
     if (id === 999) {
       // Simulate an error case
       user$ = new Observable((observer) =>
-        observer.error(new Error(`User with ID ${id} not found`))
+        observer.error(new Error(`User with ID ${id} not found`)),
       ).pipe(delay(500)); // Simulate delay before error
     } else {
       user$ = this.userDataService.getUser(id);
@@ -135,7 +144,7 @@ export class UserProfileComponent {
             console.log(
               "%c tap: Received user data in stream:",
               "color: blue",
-              userData
+              userData,
             );
             // You could do other things here, like trigger analytics maybe.
             // BUT: Notice we don't modify 'userData' here.
@@ -145,7 +154,7 @@ export class UserProfileComponent {
             console.error(
               "%c tap: Encountered an error in stream:",
               "color: red",
-              err.message
+              err.message,
             );
             // We can log the error here, but handling (like setting UI state)
             // is often better done in catchError or subscribe's error handler.
@@ -155,7 +164,7 @@ export class UserProfileComponent {
           complete: () => {
             console.log(
               "%c tap: Stream completed (no more values expected).",
-              "color: green"
+              "color: green",
             );
           },
         }),
@@ -171,11 +180,11 @@ export class UserProfileComponent {
         finalize(() => {
           this.loading.set(false);
           console.log(
-            `UserProfileComponent: Finished loading attempt for user ${id}.`
+            `UserProfileComponent: Finished loading attempt for user ${id}.`,
           );
         }),
         // Automatically unsubscribe when the component is destroyed
-        takeUntilDestroyed(this.destroyRef)
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (data) => {

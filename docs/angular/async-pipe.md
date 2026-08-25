@@ -1,3 +1,11 @@
+---
+description: "Let Angular templates subscribe and unsubscribe automatically, avoiding the most common memory leaks."
+tags:
+  - Angular
+---
+
+# Async Pipe
+
 Think of the `async` pipe as a smart assistant for handling asynchronous data right where you display it (in the HTML template). It does several important things automatically:
 
 1.  **Subscribes:** When the component loads, the `async` pipe automatically subscribes to the Observable (or Promise) you provide it.
@@ -51,10 +59,10 @@ export class UserService {
         .get<UserProfile>(`${this.userUrl}${id}`)
         .pipe(
           tap(() =>
-            console.log(`UserService: API call for user ${id} completed.`)
+            console.log(`UserService: API call for user ${id} completed.`),
           ),
           // Share & replay the single result, keep active while subscribed
-          shareReplay({ bufferSize: 1, refCount: true })
+          shareReplay({ bufferSize: 1, refCount: true }),
         );
     } else {
       console.log(`UserService: Returning cached observable for user ${id}.`);
@@ -89,20 +97,20 @@ import { Observable, EMPTY } from "rxjs"; // Import Observable and EMPTY
 
       <!-- Use the async pipe here -->
       @if (user$ | async; as user) {
-      <!-- 'user' now holds the emitted UserProfile object -->
-      <div>
-        <p><strong>Name:</strong> {{ user.name }}</p>
-        <p><strong>Username:</strong> {{ user.username }}</p>
-        <p><strong>Email:</strong> {{ user.email }}</p>
-      </div>
-      <!-- Optional: Show raw data -->
-      <!-- <details>
+        <!-- 'user' now holds the emitted UserProfile object -->
+        <div>
+          <p><strong>Name:</strong> {{ user.name }}</p>
+          <p><strong>Username:</strong> {{ user.username }}</p>
+          <p><strong>Email:</strong> {{ user.email }}</p>
+        </div>
+        <!-- Optional: Show raw data -->
+        <!-- <details>
           <summary>Raw Data</summary>
           <pre>{{ user | json }}</pre>
         </details> -->
       } @else {
-      <!-- This shows before the observable emits -->
-      <p>Loading user data...</p>
+        <!-- This shows before the observable emits -->
+        <p>Loading user data...</p>
       }
       <!-- Note: Error handling needs separate logic or wrapping the source -->
     </div>
@@ -123,7 +131,7 @@ export class UserDisplayComponent implements OnInit {
     // NO .subscribe() here for the template binding!
     this.user$ = this.userService.getUser(this.userId);
     console.log(
-      `UserDisplayComponent (ID: ${this.userId}): Assigned observable to user$`
+      `UserDisplayComponent (ID: ${this.userId}): Assigned observable to user$`,
     );
   }
 

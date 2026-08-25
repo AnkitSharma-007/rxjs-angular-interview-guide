@@ -1,3 +1,11 @@
+---
+description: "Cold Observables run fresh for every subscriber. Learn why HTTP requests restart per subscription."
+tags:
+  - Fundamentals
+---
+
+# Cold Observables
+
 A **Cold Observable** is one where the data producer (the logic inside the Observable) doesn't start running or emitting values **until** you subscribe to it.
 
 Crucially, **each time you subscribe** to a cold Observable, it starts its work from the very beginning and generates a **fresh, independent sequence of values** just for that subscriber.
@@ -10,20 +18,17 @@ Crucially, **each time you subscribe** to a cold Observable, it starts its work 
 ## Real-World Analogy
 
 1.  **Watching a YouTube Video (On-Demand):**
-
     - When you click "Play" on a video (you _subscribe_), the video stream starts playing from the beginning _just for you_.
     - If your friend clicks "Play" on the same video later (another _subscription_), they also get the video starting from the beginning, completely independent of your playback.
     - The YouTube server (the _Observable_) delivers a separate, unique stream to each viewer (each _subscriber_).
 
 2.  **Playing a DVD or Blu-ray:**
-
     - Putting the disc in the player and pressing play (_subscribing_) starts the movie from the beginning.
     - Every time someone does this with their own player (_another subscription_), the movie starts fresh for them.
 
 ## Examples in Angular/RxJS
 
 1.  **`HttpClient` (Very Common):**
-
     - Observables returned by Angular's `HttpClient` (e.g., `http.get()`, `http.post()`) are **cold**.
     - Every time you `subscribe()` to `dataService.getItems()`, Angular makes a **new HTTP request** to the server.
     - If Component A subscribes and Component B subscribes to the _same_ service call, **two separate** network requests will be made.
@@ -58,7 +63,7 @@ Crucially, **each time you subscribe** to a cold Observable, it starts its work 
     setTimeout(() => {
       console.log("Subscribing B");
       const subB = coldInterval.subscribe((val) =>
-        console.log(`Sub B: ${val}`)
+        console.log(`Sub B: ${val}`),
       ); // Starts a NEW timer for B
     }, 3000);
 

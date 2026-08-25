@@ -1,3 +1,11 @@
+---
+description: "What an Observable is, how streams emit values over time, and how Angular uses them for HTTP, forms, and routing."
+tags:
+  - Fundamentals
+---
+
+# Observable
+
 Think of an **Observable** as a **stream** of data or events that happens over time. It's like subscribing to a newsletter or a YouTube channel. Once you subscribe, you start receiving updates (emails, new videos) whenever they are published. You can receive **zero, one, or many** updates over the lifetime of that subscription.
 
 ### Key Ideas:

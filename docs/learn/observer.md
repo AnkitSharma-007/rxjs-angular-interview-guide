@@ -1,3 +1,11 @@
+---
+description: "The consumer side of a stream: the next, error, and complete callbacks that react to emissions."
+tags:
+  - Fundamentals
+---
+
+# Observer
+
 An **Observer** is the **consumer** of the values delivered by an Observable. It's the "thing" that listens to the stream and knows what to do when a new value, an error, or a completion signal arrives.
 
 Think of it like this:
@@ -49,7 +57,7 @@ this.dataSubscription = this.dataService.getItems().subscribe(
     complete: () => {
       console.log("Finished fetching items.");
     },
-  }
+  },
 );
 ```
 
@@ -65,7 +73,7 @@ You don't always need to provide all three methods. RxJS allows you to pass call
   ```typescript
   myObservable.subscribe(
     (data) => console.log(data), // next handler
-    (err) => console.error(err) // error handler
+    (err) => console.error(err), // error handler
   );
   ```
 - **`next`, `error`, and `complete`:**
@@ -73,7 +81,7 @@ You don't always need to provide all three methods. RxJS allows you to pass call
   myObservable.subscribe(
     (data) => console.log(data), // next handler
     (err) => console.error(err), // error handler
-    () => console.log("Done!") // complete handler
+    () => console.log("Done!"), // complete handler
   );
   ```
 

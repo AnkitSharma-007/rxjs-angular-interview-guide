@@ -1,3 +1,12 @@
+---
+description: "Map to an inner Observable and cancel the previous one: the type-ahead search operator."
+tags:
+  - Operators
+  - Transformation
+---
+
+# switchMap
+
 `switchMap()` is a **higher-order mapping operator**. This means it does two things:
 
 1.  It takes a value emitted by the source (outer) Observable.

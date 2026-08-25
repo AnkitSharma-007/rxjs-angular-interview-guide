@@ -1,3 +1,11 @@
+---
+description: "Hot Observables share one live stream, like DOM events. Learn what late subscribers miss and why."
+tags:
+  - Fundamentals
+---
+
+# Hot Observables
+
 A **Hot Observable** is one that produces values **even if no one is subscribed** to it. It's like a live broadcast – it's happening whether you tune in or not.
 
 When you subscribe to a hot Observable, you start receiving values from that point forward. You **miss any values** that were emitted _before_ you subscribed.

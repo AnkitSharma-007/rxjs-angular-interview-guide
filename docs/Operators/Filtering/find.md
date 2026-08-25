@@ -1,3 +1,12 @@
+---
+description: "Emit the first value matching a predicate, then complete."
+tags:
+  - Operators
+  - Filtering
+---
+
+# find
+
 The `find` operator searches through the sequence of values emitted by a source Observable. It takes a **predicate function** (a function that returns `true` or `false`) as an argument.
 
 `find` will:
@@ -68,9 +77,9 @@ export class UserStreamService {
         timer(500).pipe(
           // Wait 500ms before emitting next user
           tap(() => console.log(` -> Emitting user: ${user.name}`)),
-          switchMap(() => of(user)) // Emit the user after the delay
-        )
-      )
+          switchMap(() => of(user)), // Emit the user after the delay
+        ),
+      ),
       // This simpler version emits immediately, find still works:
       // return from(users).pipe(
       //  tap(user => console.log(` -> Emitting user: ${user.name}`))
@@ -106,16 +115,16 @@ import { find, tap } from "rxjs/operators";
       <p>Searching for the first admin user in the stream...</p>
 
       @if (foundAdmin()) {
-      <div class="result found">
-        <strong>First Admin Found:</strong>
-        <pre>{{ foundAdmin() | json }}</pre>
-      </div>
+        <div class="result found">
+          <strong>First Admin Found:</strong>
+          <pre>{{ foundAdmin() | json }}</pre>
+        </div>
       } @else if (searchComplete()) {
-      <p class="result not-found">
-        No admin user found before the stream completed.
-      </p>
+        <p class="result not-found">
+          No admin user found before the stream completed.
+        </p>
       } @else {
-      <p class="result searching">Searching...</p>
+        <p class="result searching">Searching...</p>
       }
     </div>
   `,
@@ -137,7 +146,7 @@ export class FindAdminComponent implements OnInit {
       .getUsers()
       .pipe(
         tap((user) =>
-          console.log(`Checking user: ${user.name}, isAdmin: ${user.isAdmin}`)
+          console.log(`Checking user: ${user.name}, isAdmin: ${user.isAdmin}`),
         ),
 
         // --- Apply the find operator ---
@@ -145,7 +154,7 @@ export class FindAdminComponent implements OnInit {
         find((user) => user.isAdmin === true),
         // --------------------------------
 
-        takeUntilDestroyed(this.destroyRef) // Standard cleanup
+        takeUntilDestroyed(this.destroyRef), // Standard cleanup
       )
       .subscribe({
         next: (adminUser) => {
@@ -157,7 +166,7 @@ export class FindAdminComponent implements OnInit {
           } else {
             // This case happens if the source stream completes BEFORE an admin is found.
             console.log(
-              "INFO: Stream completed without finding an admin user."
+              "INFO: Stream completed without finding an admin user.",
             );
           }
           this.searchComplete.set(true); // Mark search as finished

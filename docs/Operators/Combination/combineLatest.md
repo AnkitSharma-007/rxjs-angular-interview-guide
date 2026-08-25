@@ -1,3 +1,10 @@
+---
+description: "Combine the latest values from several streams whenever any of them emits."
+tags:
+  - Operators
+  - Combination
+---
+
 # combineLatest
 
 The `combineLatest()` operator is used when you have multiple streams of data (Observables) and you want to combine their latest values into a single stream.
@@ -86,7 +93,7 @@ export class ProductDetailComponent implements OnInit {
     const productId$ = this.route.paramMap.pipe(
       map((params) => params.get("productId")),
       filter((id): id is string => !!id),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     );
 
     const settings$ = this.userSettingsService.getSettings();
@@ -95,8 +102,8 @@ export class ProductDetailComponent implements OnInit {
       switchMap(([id, settings]) =>
         this.productService
           .getProduct(id)
-          .pipe(map((product) => ({ product, settings })))
-      )
+          .pipe(map((product) => ({ product, settings }))),
+      ),
     );
   }
 }

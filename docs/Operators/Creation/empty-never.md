@@ -1,4 +1,11 @@
-# Empty Vs Never
+---
+description: "Two observables that emit nothing: EMPTY completes immediately, NEVER stays silent forever."
+tags:
+  - Operators
+  - Creation
+---
+
+# EMPTY vs NEVER
 
 Let's clarify the difference between the RxJS constants `EMPTY` and `NEVER`. Both are simple, pre-defined Observable constants, but they represent very different stream behaviors, primarily concerning completion.
 

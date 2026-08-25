@@ -1,3 +1,9 @@
+---
+description: "Patterns for using RxJS well inside Angular applications."
+tags:
+  - Angular
+---
+
 # Angular + RxJS
 
 RxJS is woven into Angular: `HttpClient` returns Observables, reactive forms expose `valueChanges`, the router streams events, and the `async` pipe subscribes for you. This section covers the patterns that make RxJS work well inside Angular applications.
