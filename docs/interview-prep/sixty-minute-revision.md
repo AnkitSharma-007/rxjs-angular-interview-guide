@@ -53,7 +53,7 @@ Sound bites:
 
 ## 45-55 min: Cleanup & Traps
 
-Skim: [Memory Leaks](../angular/memory-leaks.md) · [Anti-Patterns](../angular/anti-patterns.md)
+Skim: [Common Traps](common-traps.md) (all fourteen myth lines) · [Anti-Patterns](../angular/anti-patterns.md)
 
 Sound bites:
 

@@ -96,6 +96,9 @@ nav:
       - "Junior Questions": interview-prep/questions-junior.md
       - "Mid-Level Questions": interview-prep/questions-mid.md
       - "Senior Questions": interview-prep/questions-senior.md
+      - "Scenarios": interview-prep/scenarios.md
+      - "Coding Challenges": interview-prep/coding-challenges.md
+      - "Common Traps": interview-prep/common-traps.md
       - "Operator Cheat Sheet": interview-prep/cheat-sheet-operators.md
       - "60-Minute Revision": interview-prep/sixty-minute-revision.md
 
