@@ -91,6 +91,13 @@ nav:
       - comparisons/index.md
       - "switchMap vs mergeMap vs concatMap vs exhaustMap": comparisons/switchMap-mergeMap-concatMap.md
       - "Subject vs BehaviorSubject vs ReplaySubject": comparisons/subject-behaviorSubject-replaySubject.md
+  - "Interview Prep":
+      - interview-prep/index.md
+      - "Junior Questions": interview-prep/questions-junior.md
+      - "Mid-Level Questions": interview-prep/questions-mid.md
+      - "Senior Questions": interview-prep/questions-senior.md
+      - "Operator Cheat Sheet": interview-prep/cheat-sheet-operators.md
+      - "60-Minute Revision": interview-prep/sixty-minute-revision.md
 
 # Configuration
 theme:

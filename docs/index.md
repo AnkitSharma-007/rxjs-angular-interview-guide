@@ -42,8 +42,24 @@ Master RxJS for Angular interviews: clear explanations, realistic Angular exampl
 
   [:octicons-arrow-right-24: See comparisons](comparisons/index.md)
 
+- :material-angular:{ .lg .middle } **RxJS in Angular**
+
+  ***
+
+  Signals interop, HTTP patterns, forms, router, caching, memory leaks, and the anti-patterns to avoid.
+
+  [:octicons-arrow-right-24: Read the Angular guides](angular/index.md)
+
+- :material-account-question:{ .lg .middle } **Interview prep**
+
+  ***
+
+  Graded questions with answers, an all-in-one cheat sheet, and a 60-minute revision plan for the final hour.
+
+  [:octicons-arrow-right-24: Start prepping](interview-prep/index.md)
+
 </div>
 
 ## RxJS through an Angular lens
 
-Every topic here is explained with real Angular usage: `HttpClient` calls, reactive forms, the `async` pipe, and subscription cleanup with `takeUntilDestroyed`. See the [Angular + RxJS](angular/index.md) section for Angular-specific guides.
+Every topic here is explained with real Angular usage: `HttpClient` calls, reactive forms, the `async` pipe, and subscription cleanup with `takeUntilDestroyed`. Interview tomorrow? Go straight to the [60-Minute Revision](interview-prep/sixty-minute-revision.md).
