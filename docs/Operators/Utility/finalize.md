@@ -15,6 +15,13 @@ The `finalize` operator lets you specify a callback function that will be execut
 
 Think of it like the `finally` block in a traditional `try...catch...finally` statement. The code inside `finalize` is **guaranteed** to run _after_ the Observable finishes its work or is stopped, regardless of _why_ it stopped (success, error, or unsubscription).
 
+!!! abstract "At a glance"
+
+    - **Signature:** `finalize(callback)`; the callback receives no arguments
+    - **Use when:** cleanup must always run: loading flags, spinners, releasing resources
+    - **Avoid when:** the logic depends on *how* the stream ended; use `tap`/`catchError` for outcome-specific behavior
+    - **Top gotcha:** it also runs on **unsubscribe**, and it runs once per subscription, after the terminal notification is delivered
+
 ## Key Points
 
 1.  **Guaranteed Execution on Termination:** Runs whether the stream succeeds, fails, or is unsubscribed.
@@ -37,6 +44,25 @@ Other uses include:
 - Logging the end of an operation.
 - Releasing any temporary resources acquired at the start of the subscription.
 
+## Minimal Example
+
+```typescript
+import { finalize, map, of } from "rxjs";
+
+of(1, 2, 3)
+  .pipe(
+    map((n) => n * 10),
+    finalize(() => console.log("teardown: stream ended"))
+  )
+  .subscribe({
+    next: console.log,
+    complete: () => console.log("complete"),
+  });
+
+// 10, 20, 30, complete, teardown: stream ended
+// (finalize fires AFTER the complete handler, and would also fire on error or unsubscribe)
+```
+
 ## Real-World Example: Managing Loading State for Data Fetching
 
 This is the classic example. We fetch data, show a loading indicator, and use `finalize` to hide the indicator when the fetch completes or fails.
@@ -51,11 +77,19 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
+import { CurrencyPipe } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { Observable, of, timer } from "rxjs";
-import { delay, switchMap, tap, catchError, finalize } from "rxjs/operators";
-import { EMPTY } from "rxjs"; // Import EMPTY
+import {
+  EMPTY,
+  Observable,
+  catchError,
+  delay,
+  finalize,
+  of,
+  switchMap,
+  tap,
+  timer,
+} from "rxjs";
 
 // --- Mock Data Service ---
 interface Product {
@@ -92,8 +126,7 @@ function mockFetchProducts(
 
 @Component({
   selector: "app-product-list",
-  standalone: true,
-  imports: [CommonModule],
+  imports: [CurrencyPipe],
   template: `
     <div>
       <h4>Product List (Finalize Example)</h4>
@@ -195,3 +228,31 @@ export class ProductListComponent {
 4.  The `subscribe` block's `next` handler updates the `products` signal only on success.
 
 No matter what happens – success, failure, or component destruction – the `finalize` block ensures that `this.loading.set(false)` is called, correctly cleaning up the UI loading state. This makes it much more reliable than trying to manage the loading flag in both the `error` and `complete`/`next` handlers of the `subscribe` block.
+
+## Common Mistakes
+
+**Resetting loading flags in `next` and `error` handlers.** That duo misses the third termination path: unsubscription (user navigates away mid-request). `finalize` covers all three with one line.
+
+**Expecting outcome information.** The callback gets no arguments and cannot tell success from failure. Pair it with `catchError` (for the error branch) rather than encoding outcome logic in `finalize`.
+
+**Forgetting it runs per subscription.** On a shared stream with three subscribers, each subscription's teardown triggers its own `finalize`. If the callback must run once per source execution, share the stream first.
+
+## Interview Q&A
+
+??? question "What is the difference between finalize and the complete handler?"
+
+    The `complete` handler runs only on successful completion. `finalize` runs on completion, error, **and** unsubscribe, making it the RxJS analogue of `finally`. That unsubscribe coverage is exactly what UI cleanup needs.
+
+??? question "When does finalize execute relative to other handlers?"
+
+    After the terminal notification has been delivered: subscribers' `complete`/`error` handlers run first, then teardown logic including `finalize`. It observes the end; it cannot intercept or alter it.
+
+??? question "How would you set a loading flag around an HTTP call, robustly?"
+
+    Set it to `true` before subscribing, then `pipe(finalize(() => loading.set(false)))`. Success, HTTP error, and mid-flight component destruction all reset the flag; no path leaves a stuck spinner.
+
+## Related
+
+- [catchError](../error-handling/catchError.md) for the outcome-specific error branch
+- [tap](tap.md) for side effects on individual notifications
+- [takeUntil](../filtering/takeUntil.md), whose unsubscribe path finalize is designed to cover

@@ -17,6 +17,13 @@ Think of it like this: Data is flowing down a pipe (your Observable stream). `ta
 
 Crucially, the sensor ( `tap` ) **does not change the data** flowing through the pipe. The same value that comes into `tap` goes out of `tap` to the next operator in the chain.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `tap(nextFn)` or `tap({ next, error, complete })`
+    - **Use when:** logging, debugging, analytics, or carefully scoped external side effects
+    - **Avoid when:** transforming values (`map`), doing cleanup (`finalize`), or handling errors (`catchError`)
+    - **Top gotcha:** `tap`'s return value is ignored, and its side effects run **once per subscription**, so multiple subscribers repeat them
+
 ## Why Use `tap`?
 
 Its primary purpose is performing actions that aren't part of the main data transformation logic:
@@ -25,6 +32,24 @@ Its primary purpose is performing actions that aren't part of the main data tran
 2.  **Debugging:** Temporarily insert `tap(console.log)` to inspect values during development.
 3.  **Updating External State (with caution):** You _could_ use `tap` to update things outside the stream, like setting a loading flag or updating a Signal. However, be mindful – complex state logic is often better handled directly in the `subscribe` block or using dedicated state management patterns. The `finalize` operator is often preferred for cleanup actions like stopping loading indicators.
 4.  **Triggering Other Actions:** Maybe start a notification or trigger some non-critical background task based on an emission.
+
+## Minimal Example
+
+```typescript
+import { map, of, tap } from "rxjs";
+
+of(1, 2, 3)
+  .pipe(
+    tap((n) => console.log("before map:", n)),
+    map((n) => n * 10),
+    tap((n) => console.log("after map:", n))
+  )
+  .subscribe();
+
+// before map: 1, after map: 10
+// before map: 2, after map: 20
+// before map: 3, after map: 30
+```
 
 ## Real-World Example: Logging and Updating Loading State During Data Fetch
 
@@ -75,16 +100,19 @@ import {
   OnInit,
   DestroyRef,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { UserDataService, SimpleUser } from "./user-data.service"; // Adjust path
-import { tap, catchError, finalize } from "rxjs/operators";
-import { EMPTY, Observable } from "rxjs"; // Import EMPTY
+import {
+  EMPTY,
+  Observable,
+  catchError,
+  delay,
+  finalize,
+  tap,
+} from "rxjs";
 
 @Component({
   selector: "app-user-profile",
-  standalone: true,
-  imports: [CommonModule],
   template: `
     <h3>User Profile (Tap Example)</h3>
     <button (click)="loadUser(1)" [disabled]="loading()">Load User 1</button>
@@ -221,3 +249,31 @@ export class UserProfileComponent {
     - The `error` and `complete` handlers in `subscribe` are less critical here because `catchError` and `finalize` are handling those aspects for UI state updates.
 
 Run this code, click the buttons, and watch the console. You'll see the `tap` logs appearing _before_ the final state updates in the `subscribe` or `finalize` blocks, demonstrating how `tap` lets you observe the stream's events without interfering with the main data flow or error handling logic.
+
+## Common Mistakes
+
+**Returning a value from `tap`.** Whatever the callback returns is discarded; the input value continues downstream unchanged. Transformations belong in `map`; async work belongs in `switchMap` and friends.
+
+**Using `tap({ complete })` for cleanup.** It never fires on error or unsubscribe. `finalize` covers all three terminal paths and is the right tool for loading flags and resource cleanup.
+
+**Forgetting side effects multiply with subscribers.** On a cold, unshared stream, three subscribers mean the `tap` runs three times, tripling analytics events or logs. Share the stream (or move the effect) when that matters.
+
+## Interview Q&A
+
+??? question "What is the difference between tap and map?"
+
+    `map` transforms the value and its return value flows downstream. `tap` observes the notification, runs a side effect, ignores the callback's return value, and passes the original value through untouched.
+
+??? question "When do side effects belong in tap vs in subscribe?"
+
+    `subscribe` is the stream's end consumer: final state updates belong there. `tap` is for observing at a specific point *inside* the pipeline (before/after certain operators), for cross-cutting concerns like logging, and for effects in shared streams where you cannot control every subscriber.
+
+??? question "Does tap execute if nobody subscribes?"
+
+    No. Like everything in a pipeline, `tap` only runs as notifications flow, and notifications only flow with at least one subscription. A common debugging surprise: adding `tap(console.log)` shows nothing because the Observable was never subscribed.
+
+## Related
+
+- [finalize](finalize.md) for guaranteed cleanup on complete, error, or unsubscribe
+- [map](../transformation/map.md) when you actually want to change the value
+- [catchError](../error-handling/catchError.md) for reacting to errors rather than observing them

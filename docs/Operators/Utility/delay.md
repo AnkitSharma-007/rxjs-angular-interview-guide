@@ -7,7 +7,7 @@ tags:
 
 # delay
 
-The `delay` operator simply **shifts the emission** of each notification (`next`, `error`, `complete`) from its source Observable forward in time by a specified duration.
+The `delay` operator **shifts the emission** of each `next` value from its source Observable forward in time by a specified duration.
 
 Think of it like **scheduled mail delivery:**
 
@@ -16,14 +16,33 @@ Think of it like **scheduled mail delivery:**
 - It waits for the specified time (e.g., 500 milliseconds).
 - _Then_, it delivers the letter (emits the `next` value) downstream.
 
-The same happens for `error` and `complete` signals – they are also held for the specified duration before being passed on.
+Completion follows the last delayed value. **Errors are the exception: an `error` notification is NOT delayed**; it tears through immediately, skipping any values still waiting in the delay buffer.
 
 ## Key Points
 
-1.  **Delays Emissions:** It delays _when_ the values/signals are sent to the next operator or subscriber.
+1.  **Delays Emissions:** It delays _when_ the values are sent to the next operator or subscriber.
 2.  **Doesn't Delay Subscription:** The subscription to the source happens immediately; only the emissions are postponed.
-3.  **Applies to All Notifications:** It delays `next`, `error`, and `complete`.
+3.  **Errors Are Not Delayed:** `next` and `complete` are shifted; an `error` fires downstream immediately and discards pending delayed values.
 4.  **Input:** Takes a duration in milliseconds (e.g., `delay(500)`) or a specific future `Date`.
+
+!!! abstract "At a glance"
+
+    - **Signature:** `delay(ms)` or `delay(date)`
+    - **Use when:** enforcing a minimum display time, simulating latency in demos and tests
+    - **Avoid when:** you want to rate-limit or coalesce emissions (`debounceTime`/`throttleTime`) or delay per-value by a dynamic amount (`delayWhen`)
+    - **Top gotcha:** errors skip the delay entirely, so "minimum display time" logic built on `delay` alone does not apply to failure paths
+
+## Minimal Example
+
+```typescript
+import { delay, of } from "rxjs";
+
+console.log("subscribing");
+of("hello").pipe(delay(1000)).subscribe(console.log);
+
+// subscribing
+// (1 second later) hello
+```
 
 ## Why Use `delay`?
 
@@ -45,11 +64,18 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { Observable, of, timer } from "rxjs"; // Import 'of' and 'timer'
-import { delay, switchMap, tap, finalize, catchError } from "rxjs/operators";
-import { EMPTY } from "rxjs"; // Import EMPTY
+import {
+  EMPTY,
+  Observable,
+  catchError,
+  delay,
+  finalize,
+  of,
+  switchMap,
+  tap,
+  timer,
+} from "rxjs";
 
 // Mock Service Function (simulates a quick backend save)
 function mockSaveOperation(): Observable<{
@@ -82,8 +108,6 @@ function mockSaveOperation(): Observable<{
 
 @Component({
   selector: "app-save-status",
-  standalone: true,
-  imports: [CommonModule],
   template: `
     <div>
       <h4>Save Example with Delay</h4>
@@ -131,7 +155,8 @@ export class SaveStatusComponent {
         }),
 
         // --- Apply the delay ---
-        // Delay the NEXT or ERROR notification by minimumDisplayTime
+        // Holds each NEXT value for minimumDisplayTime.
+        // NOTE: errors are NOT held; they skip the delay entirely.
         delay(minimumDisplayTime),
         // ---------------------
 
@@ -175,11 +200,39 @@ export class SaveStatusComponent {
 2.  `mockSaveOperation()` is called. It simulates a quick backend response (completes in ~100ms) using `of(...)` and `delay(100)`.
 3.  The result (or error) from `mockSaveOperation` flows into the component's RxJS pipe.
 4.  The first `tap` logs the immediate result from the "backend".
-5.  **`delay(minimumDisplayTime)`**: This is the key part. If the backend responded successfully (`next`), `delay` holds that success notification for 750ms before passing it on. If the backend responded with an error, `delay` holds that error notification for 750ms.
-6.  **After the 750ms delay:**
-    - If successful: The `next` notification proceeds to the `subscribe` block's `next` handler. The success message is displayed.
-    - If an error occurred: The `error` notification proceeds to the `catchError` operator. The error message is displayed.
-7.  **`finalize`**: This runs _after_ the delayed `next` or `error` has been processed (or if the stream completes/unsubscribes). It sets `saving` to `false`, hiding the "Saving..." message.
+5.  **`delay(minimumDisplayTime)`**: This is the key part. If the backend responded successfully (`next`), `delay` holds that success notification for 750ms before passing it on. **If the backend errored, the error is NOT held**: it reaches `catchError` immediately.
+6.  **After the delay (success) or immediately (error):**
+    - If successful: The `next` notification proceeds to the `subscribe` block's `next` handler after 750ms. The success message is displayed.
+    - If an error occurred: The `error` notification skips the delay and proceeds straight to `catchError`. The error message is displayed right away. (To give errors a minimum display time as well, delay the recovery instead: `catchError(err => of(err).pipe(delay(minimumDisplayTime), ...)`.)
+7.  **`finalize`**: This runs _after_ the delayed `next` or the immediate `error` has been processed (or if the stream unsubscribes). It sets `saving` to `false`, hiding the "Saving..." message.
 8.  **`takeUntilDestroyed`**: Standard cleanup.
 
-Because of `delay(750)`, even though the backend might respond in 100ms, the UI won't update with the final "Saved!" or "Error..." message, and the "Saving..." indicator won't disappear, until _at least_ 750ms have passed since the backend responded. This gives the user time to perceive the feedback.
+Because of `delay(750)`, even though the backend might respond in 100ms, the success path won't update the UI until _at least_ 750ms have passed, giving the user time to perceive the feedback.
+
+## Common Mistakes
+
+**Assuming errors are delayed.** They are not: `delay` forwards errors immediately and drops any values still waiting. Any "minimum time" or sequencing logic must handle the error path separately.
+
+**Using `delay` to space out emissions.** `delay(1000)` shifts every value by the same offset; the gaps between values stay identical. Spacing values apart is `concatMap((v) => of(v).pipe(delay(1000)))` territory.
+
+**Reaching for `delay` when the trigger should wait, not the values.** To postpone the whole subscription, use `timer(ms).pipe(switchMap(() => source$))`; `delay` subscribes to the source immediately.
+
+## Interview Q&A
+
+??? question "Does delay postpone the subscription or the emissions?"
+
+    The emissions. The source is subscribed (and starts its work, like an HTTP call) immediately; each `next` value is then held for the configured duration on its way downstream.
+
+??? question "Which notifications does delay affect?"
+
+    `next` values are delayed and `complete` waits for the last delayed value. `error` is passed through immediately and cancels pending delayed values, a detail that distinguishes strong candidates.
+
+??? question "How do you delay each value relative to the previous one instead of by a fixed offset?"
+
+    Wrap the per-value delay inside a sequential higher-order operator: `concatMap((v) => of(v).pipe(delay(gap)))` emits values `gap` apart, whereas plain `delay(gap)` shifts the entire original timing by one constant.
+
+## Related
+
+- [timer](../creation/timer.md) to create delayed sources instead of shifting existing ones
+- [debounceTime](../filtering/debounceTime.md) for delay-based coalescing of bursts
+- [concatMap](../transformation/concatMap.md) for per-value sequential delays

@@ -18,11 +18,34 @@ Think of it like setting an **egg timer** for an operation:
 
 ## Key Configurations & Behaviors
 
-You can configure `timeout` with a duration (milliseconds) or a specific Date. More advanced configurations allow specifying different timeouts for the first emission versus subsequent emissions, but the most common use is a single duration for the overall operation.
+You can configure `timeout` with a duration (milliseconds), a specific `Date`, or a config object. A plain number sets the allowed gap for **every** emission, not just the first:
 
-- `timeout(5000)`: Throws `TimeoutError` if the _first_ emission doesn't arrive within 5 seconds of subscription.
-- `timeout({ first: 5000, each: 1000 })`: Throws if the first emission takes longer than 5s, OR if the time between _any two subsequent_ emissions exceeds 1s. (Less common).
-- `timeout({ each: 10000 })`: Allows the first emission to take any amount of time, but throws if subsequent emissions are more than 10s apart.
+- `timeout(5000)`: Throws `TimeoutError` if no value arrives within 5 seconds of subscription, **or** if any later gap between values exceeds 5 seconds. (A number is shorthand for `{ each: 5000 }`.)
+- `timeout({ first: 5000, each: 1000 })`: The first value must arrive within 5s; after that, values must be at most 1s apart.
+- `timeout({ first: 5000 })`: Only the first value is bounded; later gaps are unlimited.
+- `timeout({ each: 2000, with: () => fallback$ })`: Instead of erroring, switch to a fallback Observable when the deadline passes.
+
+!!! abstract "At a glance"
+
+    - **Signature:** `timeout(ms | date | { first, each, with })`
+    - **Use when:** bounding waits on slow or unresponsive sources so the UI can react
+    - **Avoid when:** a fallback is friendlier than an error; use the `with` option instead of `catchError` gymnastics
+    - **Top gotcha:** `timeout(number)` polices the gap before **every** emission, not only the first one
+
+## Minimal Example
+
+```typescript
+import { TimeoutError, timeout, timer } from "rxjs";
+
+timer(3000) // first value would arrive after 3s
+  .pipe(timeout(1000)) // but we only allow 1s
+  .subscribe({
+    next: console.log,
+    error: (err) => console.log("timed out:", err instanceof TimeoutError),
+  });
+
+// after 1s: "timed out: true"
+```
 
 ## Why Use `timeout`?
 
@@ -40,8 +63,7 @@ A common scenario is fetching data from an external API. Sometimes, the network 
 
 ```typescript
 import { Injectable } from "@angular/core";
-import { Observable, of, timer } from "rxjs";
-import { delay, switchMap, tap } from "rxjs/operators";
+import { Observable, delay, of, tap } from "rxjs";
 
 export interface ExternalData {
   id: string;
@@ -77,16 +99,21 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
+import { JsonPipe } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { SlowDataService, ExternalData } from "./slow-data.service"; // Adjust path
-import { tap, timeout, catchError, finalize } from "rxjs/operators";
-import { EMPTY, TimeoutError } from "rxjs"; // Import TimeoutError and EMPTY
+import {
+  EMPTY,
+  TimeoutError,
+  catchError,
+  finalize,
+  tap,
+  timeout,
+} from "rxjs";
 
 @Component({
   selector: "app-data-fetcher",
-  standalone: true,
-  imports: [CommonModule],
+  imports: [JsonPipe],
   template: `
     <div>
       <h4>Data Fetcher with Timeout</h4>
@@ -206,3 +233,31 @@ export class DataFetcherComponent {
 7.  The `subscribe` block updates the `fetchedData` signal only if the operation completed successfully within the timeout period.
 
 By using `timeout`, you make your data fetching more robust against unresponsive services, leading to a better user experience.
+
+## Common Mistakes
+
+**Assuming the number form only bounds the first value.** `timeout(5000)` also errors if a long-lived stream goes quiet for 5s between emissions. For "first response within N, then anything goes", use `timeout({ first: N })`.
+
+**Hand-rolling fallbacks with catchError.** When the desired behavior is "use cached data after N ms", the built-in `with` option is cleaner: `timeout({ first: 3000, with: () => of(cached) })`.
+
+**Ordering timeout and retry wrong.** `timeout(...)` then `retry(...)` retries timed-out attempts; the reverse retries only source errors and lets a single slow attempt hang past your deadline.
+
+## Interview Q&A
+
+??? question "What exactly does timeout(5000) guarantee?"
+
+    That no more than 5 seconds pass between subscription and the first value, or between consecutive values. Any violated gap produces a `TimeoutError` and terminates the stream. Completion before the deadline is fine and produces no error.
+
+??? question "How do you time out into a fallback instead of an error?"
+
+    Use the config object's `with` option: `timeout({ each: 2000, with: () => fallback$ })` unsubscribes from the slow source and switches to the fallback stream, no `TimeoutError` involved.
+
+??? question "How would you combine timeout with retries for a flaky API?"
+
+    `http.get(url).pipe(timeout(3000), retry({ count: 2, delay: 1000 }), catchError(...))`: each attempt gets 3 seconds, timed-out attempts are retried like any other error, and the final failure is mapped to UI state.
+
+## Related
+
+- [retry](../error-handling/retry.md) to re-attempt timed-out operations
+- [catchError](../error-handling/catchError.md) for mapping `TimeoutError` to user-facing state
+- [delay](delay.md), the opposite tool: adding time instead of bounding it
