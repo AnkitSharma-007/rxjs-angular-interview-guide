@@ -79,6 +79,10 @@ nav:
   - "Angular + RxJS":
       - angular/index.md
       - "Async Pipe": angular/async-pipe.md
+      - "Signals & RxJS Interop": angular/signals-interop.md
+      - "HttpClient Patterns": angular/http-patterns.md
+      - "Memory Leaks": angular/memory-leaks.md
+      - "RxJS Anti-Patterns": angular/anti-patterns.md
   - Comparisons:
       - comparisons/index.md
       - "switchMap vs mergeMap vs concatMap vs exhaustMap": comparisons/switchMap-mergeMap-concatMap.md
