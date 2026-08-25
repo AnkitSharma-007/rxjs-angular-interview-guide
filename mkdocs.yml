@@ -1,10 +1,11 @@
 # Project information
 site_name: RxJS Angular interview guide
+site_url: https://ankitsharma-007.github.io/rxjs-angular-interview-guide/
 site_description: A comprehensive, open-source RxJS interview guide tailored for Angular developers. Includes real-world questions, detailed answers, and code examples to help you ace your next interview.
 site_author: Ankit Sharma
 
 # Repository
-repo_name: "RxJS Angular interview guide"
+repo_name: "AnkitSharma-007/rxjs-angular-interview-guide"
 repo_url: "https://github.com/AnkitSharma-007/rxjs-angular-interview-guide"
 
 # Navigation
@@ -76,16 +77,24 @@ theme:
   logo: assets/Rx_Logo.png
   favicon: assets/favicon.ico
   palette:
-    # Palette toggle for light mode
-    - scheme: default
+    # Palette toggle for automatic (system preference) mode
+    - media: "(prefers-color-scheme)"
       toggle:
-        icon: material/weather-night
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
         name: Switch to dark mode
 
     # Palette toggle for dark mode
-    - scheme: slate
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
       toggle:
-        icon: material/weather-sunny
+        icon: material/brightness-4
         name: Switch to system preference
   features:
     - navigation.instant
@@ -93,6 +102,21 @@ theme:
     - navigation.footer
     - navigation.indexes
     - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+    - search.share
+
+plugins:
+  - search
+  - tags
+  - social:
+      enabled: !ENV [CI, false] # needs the imaging dependencies; generate cards in CI only
 
 extra:
   social:
@@ -106,14 +130,25 @@ extra_css:
 
 # Extensions
 markdown_extensions:
+  - admonition
   - attr_list
-  - codehilite:
-      guess_lang: false
+  - md_in_html
   - footnotes
   - toc:
       permalink: "#"
   - pymdownx.betterem
-  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
