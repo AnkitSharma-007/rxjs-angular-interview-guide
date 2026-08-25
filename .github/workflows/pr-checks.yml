@@ -16,7 +16,7 @@ jobs:
           python-version: 3.x
       - name: Install social card dependencies
         run: sudo apt-get update && sudo apt-get install -y libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev
-      - run: pip install "mkdocs-material[imaging]"
+      - run: pip install "mkdocs-material[imaging]" mkdocs-redirects
       - run: mkdocs build --strict
   links:
     name: Link check

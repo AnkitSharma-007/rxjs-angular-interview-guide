@@ -10,62 +10,66 @@ repo_url: "https://github.com/AnkitSharma-007/rxjs-angular-interview-guide"
 
 # Navigation
 nav:
-  - "Home":
-      - index.md
-  - "Overview":
-      - "Observable": observable.md
-      - "Observer": observer.md
-      - "Cold Observables": cold-observables.md
-      - "Hot Observables": hot-observables.md
-      - "Promise Vs Observable": promise-vs-observable.md
-      - "Async pipe": async-pipe.md
-  - "Operators":
-      - "RxJS operators": Operators/RxJS-operators.md
-      - "Combination":
-          - "combineLatest": Operators/Combination/combineLatest.md
-          - "forkJoin": Operators/Combination/forkJoin.md
-          - "zip": Operators/Combination/zip.md
-          - "withLatestFrom": Operators/Combination/withLatestFrom.md
+  - Home: index.md
+  - Learn:
+      - learn/index.md
+      - "Observable": learn/observable.md
+      - "Observer": learn/observer.md
+      - "Cold Observables": learn/cold-observables.md
+      - "Hot Observables": learn/hot-observables.md
+      - "Promise vs Observable": learn/promise-vs-observable.md
+  - Operators:
+      - operators/index.md
       - "Creation":
-          - "empty VS never": Operators/Creation/empty-never.md
-          - "from": Operators/Creation/from.md
-          - "interval": Operators/Creation/interval.md
-          - "of": Operators/Creation/of.md
-          - "timer": Operators/Creation/timer.md
-      - "Error Handling":
-          - "catchError": Operators/Error/catchError.md
-          - "retry": Operators/Error/retry.md
-          - "retryWhen": Operators/Error/retryWhen.md
-      - "Filtering":
-          - "debounceTime": Operators/Filtering/debounceTime.md
-          - "distinctUntilChanged": Operators/Filtering/distinctUntilChanged.md
-          - "filter": Operators/Filtering/filter.md
-          - "find": Operators/Filtering/find.md
-          - "first": Operators/Filtering/first.md
-          - "last": Operators/Filtering/last.md
-          - "skip": Operators/Filtering/skip.md
-          - "take": Operators/Filtering/take.md
-          - "takeUntil": Operators/Filtering/takeUntil.md
-      - "Multicasting":
-          - "share": Operators/Multicasting/share.md
-          - "shareReplay": Operators/Multicasting/shareReplay.md
-      - "Subjects":
-          - "subject": Operators/Subjects/subject.md
-          - "behaviorSubject": Operators/Subjects/behaviorSubject.md
-          - "replaySubject": Operators/Subjects/replaySubject.md
-          - "Subject Vs BehaviorSubject Vs ReplaySubject": Operators/Subjects/subject-behaviorSubject-replaySubject.md
+          - "of": operators/creation/of.md
+          - "from": operators/creation/from.md
+          - "interval": operators/creation/interval.md
+          - "timer": operators/creation/timer.md
+          - "EMPTY vs NEVER": operators/creation/empty-never.md
       - "Transformation":
-          - "concatMap": Operators/Transformation/concatMap.md
-          - "exhaustMap": Operators/Transformation/exhaustMap.md
-          - "map": Operators/Transformation/map.md
-          - "mergeMap": Operators/Transformation/mergeMap.md
-          - "switchMap": Operators/Transformation/switchMap.md
-          - "switchMap Vs mergeMap Vs concatMap": Operators/Transformation/switchMap-mergeMap-concatMap.md
+          - "map": operators/transformation/map.md
+          - "switchMap": operators/transformation/switchMap.md
+          - "mergeMap": operators/transformation/mergeMap.md
+          - "concatMap": operators/transformation/concatMap.md
+          - "exhaustMap": operators/transformation/exhaustMap.md
+      - "Filtering":
+          - "filter": operators/filtering/filter.md
+          - "debounceTime": operators/filtering/debounceTime.md
+          - "distinctUntilChanged": operators/filtering/distinctUntilChanged.md
+          - "take": operators/filtering/take.md
+          - "takeUntil": operators/filtering/takeUntil.md
+          - "first": operators/filtering/first.md
+          - "last": operators/filtering/last.md
+          - "skip": operators/filtering/skip.md
+          - "find": operators/filtering/find.md
+      - "Combination":
+          - "combineLatest": operators/combination/combineLatest.md
+          - "forkJoin": operators/combination/forkJoin.md
+          - "zip": operators/combination/zip.md
+          - "withLatestFrom": operators/combination/withLatestFrom.md
+      - "Error Handling":
+          - "catchError": operators/error-handling/catchError.md
+          - "retry": operators/error-handling/retry.md
+          - "retryWhen": operators/error-handling/retryWhen.md
       - "Utility":
-          - "delay": Operators/Utility/delay.md
-          - "finalize": Operators/Utility/finalize.md
-          - "tap": Operators/Utility/tap.md
-          - "timeout": Operators/Utility/timeout.md
+          - "tap": operators/utility/tap.md
+          - "delay": operators/utility/delay.md
+          - "finalize": operators/utility/finalize.md
+          - "timeout": operators/utility/timeout.md
+  - "Subjects & Multicasting":
+      - subjects/index.md
+      - "Subject": subjects/subject.md
+      - "BehaviorSubject": subjects/behaviorSubject.md
+      - "ReplaySubject": subjects/replaySubject.md
+      - "share": subjects/share.md
+      - "shareReplay": subjects/shareReplay.md
+  - "Angular + RxJS":
+      - angular/index.md
+      - "Async Pipe": angular/async-pipe.md
+  - Comparisons:
+      - comparisons/index.md
+      - "switchMap vs mergeMap vs concatMap": comparisons/switchMap-mergeMap-concatMap.md
+      - "Subject vs BehaviorSubject vs ReplaySubject": comparisons/subject-behaviorSubject-replaySubject.md
 
 # Configuration
 theme:
@@ -117,6 +121,52 @@ plugins:
   - tags
   - social:
       enabled: !ENV [CI, false] # needs the imaging dependencies; generate cards in CI only
+  - redirects:
+      redirect_maps:
+        observable.md: learn/observable.md
+        observer.md: learn/observer.md
+        cold-observables.md: learn/cold-observables.md
+        hot-observables.md: learn/hot-observables.md
+        promise-vs-observable.md: learn/promise-vs-observable.md
+        async-pipe.md: angular/async-pipe.md
+        Operators/RxJS-operators.md: operators/index.md
+        Operators/Creation/empty-never.md: operators/creation/empty-never.md
+        Operators/Creation/from.md: operators/creation/from.md
+        Operators/Creation/interval.md: operators/creation/interval.md
+        Operators/Creation/of.md: operators/creation/of.md
+        Operators/Creation/timer.md: operators/creation/timer.md
+        Operators/Transformation/concatMap.md: operators/transformation/concatMap.md
+        Operators/Transformation/exhaustMap.md: operators/transformation/exhaustMap.md
+        Operators/Transformation/map.md: operators/transformation/map.md
+        Operators/Transformation/mergeMap.md: operators/transformation/mergeMap.md
+        Operators/Transformation/switchMap.md: operators/transformation/switchMap.md
+        Operators/Transformation/switchMap-mergeMap-concatMap.md: comparisons/switchMap-mergeMap-concatMap.md
+        Operators/Filtering/debounceTime.md: operators/filtering/debounceTime.md
+        Operators/Filtering/distinctUntilChanged.md: operators/filtering/distinctUntilChanged.md
+        Operators/Filtering/filter.md: operators/filtering/filter.md
+        Operators/Filtering/find.md: operators/filtering/find.md
+        Operators/Filtering/first.md: operators/filtering/first.md
+        Operators/Filtering/last.md: operators/filtering/last.md
+        Operators/Filtering/skip.md: operators/filtering/skip.md
+        Operators/Filtering/take.md: operators/filtering/take.md
+        Operators/Filtering/takeUntil.md: operators/filtering/takeUntil.md
+        Operators/Combination/combineLatest.md: operators/combination/combineLatest.md
+        Operators/Combination/forkJoin.md: operators/combination/forkJoin.md
+        Operators/Combination/withLatestFrom.md: operators/combination/withLatestFrom.md
+        Operators/Combination/zip.md: operators/combination/zip.md
+        Operators/Error/catchError.md: operators/error-handling/catchError.md
+        Operators/Error/retry.md: operators/error-handling/retry.md
+        Operators/Error/retryWhen.md: operators/error-handling/retryWhen.md
+        Operators/Multicasting/share.md: subjects/share.md
+        Operators/Multicasting/shareReplay.md: subjects/shareReplay.md
+        Operators/Subjects/subject.md: subjects/subject.md
+        Operators/Subjects/behaviorSubject.md: subjects/behaviorSubject.md
+        Operators/Subjects/replaySubject.md: subjects/replaySubject.md
+        Operators/Subjects/subject-behaviorSubject-replaySubject.md: comparisons/subject-behaviorSubject-replaySubject.md
+        Operators/Utility/delay.md: operators/utility/delay.md
+        Operators/Utility/finalize.md: operators/utility/finalize.md
+        Operators/Utility/tap.md: operators/utility/tap.md
+        Operators/Utility/timeout.md: operators/utility/timeout.md
 
 extra:
   social:
