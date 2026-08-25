@@ -24,6 +24,13 @@ It behaves differently based on the arguments you provide:
     - Continues emitting sequential numbers (`2`, `3`, ...) every `period` milliseconds.
     - This form **never completes** on its own (just like `interval`).
 
+!!! abstract "At a glance"
+
+    - **Signature:** `timer(dueTime)` for one delayed emission, `timer(initialDelay, period)` for recurring emissions
+    - **Use when:** delayed one-shot actions, or polling with a custom start delay (including `timer(0, n)` for start-now polling)
+    - **Avoid when:** a plain fixed cadence is all you need and `interval` reads clearer
+    - **Top gotcha:** the single-argument form completes after one value; the two-argument form never completes and needs teardown
+
 ## Key Characteristics
 
 - **Asynchronous:** Emissions happen after specified delays.
@@ -40,6 +47,21 @@ It behaves differently based on the arguments you provide:
 - `timer(0, 1000)`: Waits 0ms (emits `0` immediately), waits 1000ms, emits `1`, waits 1000ms, emits `2`, ... (Starts immediately, then intervals).
 - `timer(5000, 1000)`: Waits 5000ms, emits `0`, waits 1000ms, emits `1`, waits 1000ms, emits `2`, ... (Initial delay before starting intervals).
 
+## Minimal Example
+
+```typescript
+import { timer } from "rxjs";
+
+timer(2000).subscribe({
+  next: console.log,
+  complete: () => console.log("complete"),
+});
+// after 2s: 0, complete
+
+timer(0, 1000).subscribe(console.log);
+// immediately: 0, then 1, 2, 3... every second (never completes)
+```
+
 ## Real-World Example Scenarios
 
 1.  **`timer(dueTime)` Scenario: Delayed Action / Welcome Message**
@@ -51,57 +73,30 @@ It behaves differently based on the arguments you provide:
 **Code Snippet 1 (Using `timer(dueTime)` - Delayed Message):**
 
 ```typescript
-import { Component, OnInit } from "@angular/core";
-import { timer, Subscription } from "rxjs";
+import { Component, signal } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { timer } from "rxjs";
 
 @Component({
   selector: "app-delayed-message",
   template: `
     <h4>Welcome!</h4>
-    <div *ngIf="showHelpMessage" class="tooltip-message">
-      Looks like you've been here a few seconds. Need any help?
-    </div>
+    @if (showHelpMessage()) {
+      <div class="tooltip-message">
+        Looks like you've been here a few seconds. Need any help?
+      </div>
+    }
   `,
 })
-export class DelayedMessageComponent implements OnInit {
-  showHelpMessage = false;
-  private timerSubscription: Subscription | undefined;
+export class DelayedMessageComponent {
+  protected readonly showHelpMessage = signal(false);
 
-  ngOnInit(): void {
-    const messageDelay = 3000; // 3 seconds
-    console.log(
-      `Component initialized at ${new Date().toLocaleTimeString()}. Setting timer for ${messageDelay}ms.`,
-    );
-
-    // Create an observable that emits 0 after 3 seconds, then completes.
-    const delayTimer$ = timer(messageDelay);
-
-    this.timerSubscription = delayTimer$.subscribe({
-      next: (value) => {
-        // This will be called once with value 0 after 3 seconds
-        console.log(
-          `Timer emitted ${value} at ${new Date().toLocaleTimeString()}. Showing message.`,
-        );
-        this.showHelpMessage = true;
-      },
-      complete: () => {
-        // This will be called immediately after the 'next' emission
-        console.log("Delay timer completed.");
-        // Since it completes, explicit unsubscription in ngOnDestroy for *this specific timer*
-        // isn't strictly necessary for leak prevention, but is still good practice
-        // if the component could be destroyed *before* the timer fires.
-      },
-    });
-  }
-
-  // Good practice to include, especially if combining with other subscriptions
-  ngOnDestroy(): void {
-    if (this.timerSubscription) {
-      this.timerSubscription.unsubscribe();
-      console.log(
-        "Delayed message timer unsubscribed (if it was still running).",
-      );
-    }
+  constructor() {
+    // emits 0 once after 3s, then completes;
+    // takeUntilDestroyed covers early navigation away
+    timer(3000)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.showHelpMessage.set(true));
   }
 }
 ```
@@ -111,89 +106,61 @@ export class DelayedMessageComponent implements OnInit {
 Let's adapt the polling example to wait 5 seconds initially, then poll every 10 seconds.
 
 ```typescript
-import { Component, OnInit, OnDestroy } from "@angular/core";
+import { Component, inject, signal } from "@angular/core";
+import { DatePipe, JsonPipe } from "@angular/common";
 import { HttpClient } from "@angular/common/http";
-import { timer, Subscription, Observable } from "rxjs";
-import { switchMap, catchError, tap } from "rxjs/operators";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { EMPTY, catchError, switchMap, timer } from "rxjs";
 
 @Component({
   selector: "app-delayed-poller",
+  imports: [DatePipe, JsonPipe],
   template: `
     <h4>Delayed Server Status Check</h4>
     <p>Waiting 5s initially, then checking every 10s...</p>
-    <div *ngIf="status">
-      <strong>Last Status:</strong> {{ status | json }}
-      <br />
-      <em>Last Checked: {{ lastChecked | date: "mediumTime" }}</em>
-    </div>
-    <div *ngIf="errorMessage"><strong>Error:</strong> {{ errorMessage }}</div>
+    @if (status(); as current) {
+      <div>
+        <strong>Last Status:</strong> {{ current | json }}
+        <br />
+        <em>Last Checked: {{ lastChecked() | date: "mediumTime" }}</em>
+      </div>
+    }
+    @if (errorMessage()) {
+      <div><strong>Error:</strong> {{ errorMessage() }}</div>
+    }
   `,
 })
-export class DelayedPollerComponent implements OnInit, OnDestroy {
-  status: any = null;
-  lastChecked: Date | null = null;
-  errorMessage: string = "";
-
-  private pollingSubscription: Subscription | undefined;
+export class DelayedPollerComponent {
+  private readonly http = inject(HttpClient);
   private readonly INITIAL_DELAY_MS = 5000; // 5 seconds
   private readonly POLLING_PERIOD_MS = 10000; // 10 seconds
 
-  constructor(private http: HttpClient) {}
+  protected readonly status = signal<unknown | null>(null);
+  protected readonly lastChecked = signal<Date | null>(null);
+  protected readonly errorMessage = signal("");
 
-  ngOnInit(): void {
-    console.log(
-      `Starting delayed polling now (${new Date().toLocaleString()}). Initial delay: ${
-        this.INITIAL_DELAY_MS
-      }ms, Period: ${this.POLLING_PERIOD_MS}ms.`,
-    );
-
-    // Create timer: waits 5s, emits 0, then emits 1, 2,... every 10s
-    const pollingTimer$ = timer(this.INITIAL_DELAY_MS, this.POLLING_PERIOD_MS);
-
-    this.pollingSubscription = pollingTimer$
+  constructor() {
+    // waits 5s, emits 0, then emits 1, 2,... every 10s
+    timer(this.INITIAL_DELAY_MS, this.POLLING_PERIOD_MS)
       .pipe(
-        tap((count) =>
-          console.log(`Polling timer emitted ${count}. Fetching status.`),
-        ),
-        // Switch to HTTP request on each timer emission
-        switchMap((count) => {
-          return this.http.get<any>("/api/server/status").pipe(
-            // Use your actual endpoint
+        switchMap(() =>
+          this.http.get<unknown>("/api/server/status").pipe(
             catchError((error) => {
-              console.error(
-                `Error fetching status (emission ${count}):`,
-                error,
+              this.errorMessage.set(
+                `Failed to fetch status (${error.statusText || "Unknown Error"})`,
               );
-              this.errorMessage = `Failed to fetch status (${
-                error.statusText || "Unknown Error"
-              })`;
-              this.status = null;
-              return []; // Continue polling even after error
+              this.status.set(null);
+              return EMPTY; // skip this cycle, keep polling
             }),
-          );
-        }),
+          ),
+        ),
+        takeUntilDestroyed(), // required: this timer variant never completes
       )
-      .subscribe({
-        next: (statusData) => {
-          console.log("Status received:", statusData);
-          this.status = statusData;
-          this.lastChecked = new Date();
-          this.errorMessage = "";
-        },
-        error: (err) => {
-          console.error("Polling stream error:", err);
-          this.errorMessage = "Polling mechanism failed.";
-        },
-        // No 'complete' handler here because this timer variant never completes
+      .subscribe((statusData) => {
+        this.status.set(statusData);
+        this.lastChecked.set(new Date());
+        this.errorMessage.set("");
       });
-  }
-
-  ngOnDestroy(): void {
-    // VERY IMPORTANT for the timer(initialDelay, period) variant!
-    if (this.pollingSubscription) {
-      this.pollingSubscription.unsubscribe();
-      console.log("Delayed polling stopped and unsubscribed.");
-    }
   }
 }
 ```
@@ -201,7 +168,35 @@ export class DelayedPollerComponent implements OnInit, OnDestroy {
 **Explanation:**
 
 - **Example 1:** `timer(3000)` waits 3 seconds, emits `0`, completes. Useful for one-off delayed actions.
-- **Example 2:** `timer(5000, 10000)` waits 5 seconds, emits `0`, then continues emitting `1, 2, ...` at 10-second intervals. This requires careful unsubscription in `ngOnDestroy` just like `interval`.
+- **Example 2:** `timer(5000, 10000)` waits 5 seconds, emits `0`, then continues emitting `1, 2, ...` at 10-second intervals. Because this variant never completes, `takeUntilDestroyed()` ties the polling loop to the component's lifetime.
+
+## Common Mistakes
+
+**Forgetting which form completes.** `timer(n)` is one-shot and self-completing; `timer(n, p)` is infinite. Mixing them up either kills a polling loop after one round or leaks a timer forever.
+
+**Reimplementing `timer(0, n)` with extra operators.** `interval(n).pipe(startWith(-1))` and friends work, but `timer(0, n)` says "start now, repeat every n" in one call.
+
+**Using `timer` for per-emission delays.** Shifting an existing stream's values is [`delay`](../utility/delay.md)'s job; `timer` creates a new source.
+
+## Interview Q&A
+
+??? question "What are the differences between timer and interval?"
+
+    `interval(n)` always waits one period before the first value and repeats forever. `timer` decouples the first emission from the cadence: `timer(0, n)` starts immediately, `timer(d)` fires once after `d` and completes. Everything `interval` does, `timer` can express.
+
+??? question "How would you implement a one-time delayed action that is safe if the component dies first?"
+
+    `timer(delay).pipe(takeUntilDestroyed()).subscribe(...)`. The timer self-completes after firing, and the interop operator guards the window before it fires, both paths end the subscription cleanly.
+
+??? question "Can timer take a Date?"
+
+    Yes: `timer(new Date(targetTime))` emits when the wall clock reaches the date, useful for scheduled UI events like session-expiry warnings.
+
+## Related
+
+- [interval](interval.md) for plain fixed-cadence ticking
+- [delay](../utility/delay.md) to shift an existing stream instead of creating one
+- [debounceTime](../filtering/debounceTime.md), which uses the same timer concept reactively
 
 ## Summary
 

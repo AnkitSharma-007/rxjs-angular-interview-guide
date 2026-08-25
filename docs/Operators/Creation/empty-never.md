@@ -23,6 +23,13 @@ Think of it like this: Both represent a stream that will _never give you any dat
     - **Analogy:** It's like a process that hangs forever without producing output or terminating, or a phone line that just keeps ringing and ringing without ever being answered or going to an error state. It signals "I have nothing for you right now, and I might _never_ have anything, and I'm certainly not finished."
     - **Use Case:** Represents a stream that simply never emits or terminates. This can be useful in testing scenarios or when you want to keep a combination operator (like `race` or `combineLatest`) alive, even if one of its potential sources will never produce a relevant value or complete. It effectively keeps that "slot" open indefinitely without signalling completion or error. It can also be used intentionally to prevent parts of an Observable chain from completing.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `EMPTY` and `NEVER` are constants, not functions; import and use them directly
+    - **Use `EMPTY` when:** a branch should produce nothing but still complete, typically inside `switchMap`/`concatMap` conditionals or `catchError`
+    - **Use `NEVER` when:** a stream must stay open silently: tests, keeping combinators alive, deliberately preventing completion
+    - **Top gotcha:** returning `NEVER` where `EMPTY` was meant leaves queues (`concatMap`) and joins (`forkJoin`) waiting forever
+
 ## Direct Comparison
 
 | Feature              | `EMPTY`                     | `NEVER`                |
@@ -31,6 +38,24 @@ Think of it like this: Both represent a stream that will _never give you any dat
 | **`complete`**       | Yes (immediately)           | No (never)             |
 | **`error`**          | No (by default)             | No (never)             |
 | **Terminates?**      | Yes (completes immediately) | No (runs indefinitely) |
+
+## Minimal Example
+
+```typescript
+import { EMPTY, NEVER } from "rxjs";
+
+EMPTY.subscribe({
+  next: () => console.log("next"), // never runs
+  complete: () => console.log("EMPTY: complete"), // runs immediately
+});
+
+NEVER.subscribe({
+  next: () => console.log("next"), // never runs
+  complete: () => console.log("complete"), // never runs either
+});
+
+// Output: "EMPTY: complete" and nothing else, ever
+```
 
 ## Code Snippet Demonstration
 
@@ -134,3 +159,23 @@ export class EmptyNeverDemoComponent implements OnInit, OnDestroy {
 Choose `EMPTY` when you need an Observable that does nothing but signals successful completion instantly.
 
 Choose `NEVER` when you need an Observable that does nothing and _never_ signals completion or error.
+
+## Interview Q&A
+
+??? question "Where does EMPTY show up in real Angular code?"
+
+    Mostly in two places: as a conditional no-op inside higher-order mapping (`switchMap(x => valid(x) ? this.http.post(...) : EMPTY)`) and as a "swallow the error, emit nothing" recovery in `catchError(() => EMPTY)`. In both, downstream completion semantics stay healthy because EMPTY completes.
+
+??? question "What breaks if you use NEVER instead of EMPTY inside concatMap?"
+
+    `concatMap` waits for each inner Observable to complete before starting the next. `NEVER` never completes, so the queue stalls permanently: every later source value waits behind a stream that will not end. The same trap freezes `forkJoin` and delays `combineLatest` first emissions.
+
+??? question "Does subscribing to EMPTY require cleanup?"
+
+    No; it completes synchronously on subscribe, which closes the subscription. `NEVER` is the opposite: it never terminates itself, so the subscriber must unsubscribe (or use `takeUntil`-style operators) to release it.
+
+## Related
+
+- [of](of.md), whose zero-argument form behaves like EMPTY
+- [concatMap](../transformation/concatMap.md) and [forkJoin](../combination/forkJoin.md), where the completion difference matters most
+- [catchError](../error-handling/catchError.md), a frequent EMPTY call site

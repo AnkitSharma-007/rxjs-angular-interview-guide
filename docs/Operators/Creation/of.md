@@ -11,12 +11,32 @@ The `of()` operator is a **creation operator**. Its job is simple: it creates an
 
 Think of it as a way to turn a fixed set of known values into an Observable stream.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `of(...values)`
+    - **Use when:** turning fixed, known values into a stream: defaults, test data, fallbacks for `catchError`
+    - **Avoid when:** you want an array's items emitted one by one (`from(array)`) or lazy evaluation (`defer`)
+    - **Top gotcha:** `of([1, 2, 3])` emits the whole array as **one** value; `from([1, 2, 3])` emits three values
+
 ## Key Characteristics
 
 - **Synchronous:** It emits all its values immediately and synchronously when you subscribe.
 - **Ordered:** It emits the values in the exact order they are passed as arguments.
 - **Completes:** After emitting the last value, it sends a completion notification.
 - **Takes Multiple Arguments:** You list the values you want to emit directly as arguments to `of()`.
+
+## Minimal Example
+
+```typescript
+import { of } from "rxjs";
+
+of("Low", "Medium", "High").subscribe({
+  next: console.log,
+  complete: () => console.log("complete"),
+});
+
+// Low, Medium, High, complete   (all synchronously, in order)
+```
 
 ## Real-World Example Scenario
 
@@ -27,63 +47,64 @@ Imagine you have a component in your Angular application that needs to display a
 ## Code Snippet (Angular Component)
 
 ```typescript
-import { Component, OnInit } from "@angular/core";
-import { Observable, of } from "rxjs"; // Import 'of'
+import { Component } from "@angular/core";
+import { AsyncPipe } from "@angular/common";
+import { of, toArray } from "rxjs";
 
 @Component({
   selector: "app-priority-options",
+  imports: [AsyncPipe],
   template: `
     <h4>Available Priorities:</h4>
     <ul>
-      <li *ngFor="let priority of priorities$ | async">{{ priority }}</li>
+      @for (priority of priorities$ | async; track priority) {
+        <li>{{ priority }}</li>
+      }
     </ul>
   `,
 })
-export class PriorityOptionsComponent implements OnInit {
-  // Declare an Observable property to hold the stream of priorities
-  priorities$: Observable<string> | undefined;
-
-  ngOnInit(): void {
-    console.log("Component initializing...");
-
-    // Use of() to create an Observable from a fixed list of strings
-    this.priorities$ = of("Low", "Medium", "High", "Critical");
-
-    console.log(
-      "Observable created with of(). Subscribing manually for demonstration...",
-    );
-
-    // Manual subscription (often handled by AsyncPipe in templates as shown above)
-    this.priorities$.subscribe({
-      next: (value) => {
-        // This will be called for each value ('Low', 'Medium', 'High', 'Critical')
-        console.log("Received priority:", value);
-      },
-      error: (err) => {
-        // This won't be called in this case because of() doesn't error
-        console.error("Error:", err);
-      },
-      complete: () => {
-        // This will be called immediately after the last value ('Critical') is emitted
-        console.log("Priority stream complete!");
-      },
-    });
-
-    console.log("Subscription processing finished (synchronously).");
-  }
+export class PriorityOptionsComponent {
+  // of() emits each value separately; toArray() collects them into one
+  // array emission so the async pipe hands the template a complete list
+  protected readonly priorities$ = of("Low", "Medium", "High", "Critical").pipe(
+    toArray(),
+  );
 }
 ```
 
 **Explanation:**
 
-1.  **`import { of } from 'rxjs';`**: We import the `of` operator.
-2.  **`this.priorities$ = of('Low', 'Medium', 'High', 'Critical');`**: We call `of()` with our list of priority strings as arguments. This immediately creates an Observable (`this.priorities$`).
-3.  **Subscription Behavior:**
-    - When `subscribe()` is called (either manually or via the `async` pipe), the Observable created by `of()` _synchronously_ emits 'Low', then 'Medium', then 'High', then 'Critical'.
-    - The `next` handler in our manual subscription logs each of these values.
-    - Immediately after emitting 'Critical', the Observable sends the `complete` notification, and our `complete` handler logs "Priority stream complete!".
-    - The `error` handler is never called because `of()` successfully emits its predefined values.
-4.  **`async` pipe:** In the template (`*ngFor="let priority of priorities$ | async"`), Angular's `async` pipe subscribes to `priorities$`, receives each value ('Low', 'Medium', etc.), updates the list, and automatically unsubscribes and handles completion/errors when the component is destroyed.
+1.  **`of('Low', 'Medium', 'High', 'Critical')`**: Creates an Observable that emits each priority string one after another, synchronously, then completes.
+2.  **`toArray()`**: The `async` pipe only ever exposes the **latest** emission. Without `toArray`, the template would see just `'Critical'` (and `@for` would iterate its characters). Collecting into a single array emission gives the template the whole list at once.
+3.  **`async` pipe**: Subscribes, delivers the array, and unsubscribes automatically when the component is destroyed.
+
+## Common Mistakes
+
+**`of(array)` when you meant `from(array)`.** `of([1, 2, 3])` is a stream of one array; `from([1, 2, 3])` is a stream of three numbers. Downstream operators behave completely differently for each.
+
+**Rendering a multi-emission stream with the async pipe.** The pipe shows the latest value, not the history. If the template needs all values, collect them (`toArray`, `scan`) or emit an array in the first place.
+
+**Expecting laziness.** `of(expensiveCall())` runs `expensiveCall()` immediately, at Observable-creation time. For per-subscription evaluation, use `defer(() => of(expensiveCall()))`.
+
+## Interview Q&A
+
+??? question "Is of() synchronous or asynchronous?"
+
+    Synchronous: all values and the completion are delivered during the `subscribe()` call itself. That makes it handy for tests and fallbacks, and a good example when explaining that Observables are not inherently async.
+
+??? question "What is the difference between of and from?"
+
+    `of` emits its **arguments** as-is; `from` **converts** a single input (array, iterable, promise) into a stream of its items or resolution. `of('abc')` emits one string; `from('abc')` emits 'a', 'b', 'c'.
+
+??? question "What does of() with no arguments do?"
+
+    It emits nothing and completes immediately, behaviorally the same as `EMPTY` (which is preferred for readability and reuse, being a shared constant).
+
+## Related
+
+- [from](from.md) for converting arrays, iterables, and promises
+- [EMPTY vs NEVER](empty-never.md) for the no-value edge cases
+- [catchError](../error-handling/catchError.md), where `of(fallback)` is the standard recovery
 
 ## Summary
 

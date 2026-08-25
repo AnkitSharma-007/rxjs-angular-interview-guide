@@ -16,6 +16,13 @@ The `from()` operator is another **creation operator**, but its main purpose is 
 
 When given an array or iterable, `from()` emits each item from that collection one by one, in order, and then completes. When given a Promise, it waits for the Promise to resolve, emits the resolved value as its single `next` notification, and then completes. If the Promise rejects, `from()` emits an error notification.
 
+!!! abstract "At a glance"
+
+    - **Signature:** `from(input)` where input is an array, iterable, promise, or Observable-like
+    - **Use when:** converting existing data structures or promise-based APIs into streams
+    - **Avoid when:** you want the array emitted as one value (`of`) or lazy execution (`defer`)
+    - **Top gotcha:** promises are eager; the work starts when the promise is created, and unsubscribing does **not** cancel it
+
 ## Key Characteristics
 
 - **Conversion:** Its primary role is converting something _else_ into an Observable.
@@ -32,6 +39,18 @@ This is a common point of confusion:
 - `of([1, 2, 3])`: Emits the **entire array `[1, 2, 3]` as a single item**.
 - `from([1, 2, 3])`: Emits **`1`**, then **`2`**, then **`3`** as three separate items.
 
+## Minimal Example
+
+```typescript
+import { from } from "rxjs";
+
+from(["a", "b", "c"]).subscribe(console.log);
+// a, b, c   (three separate, synchronous emissions)
+
+from(Promise.resolve(42)).subscribe(console.log);
+// 42   (emitted asynchronously when the promise resolves)
+```
+
 ## Real-World Example Scenarios
 
 1.  **Processing Array Items:** You might fetch configuration data which arrives as a plain array, but you want to use RxJS operators (`map`, `filter`, etc.) to process _each item_ in the array within a stream.
@@ -42,139 +61,111 @@ This is a common point of confusion:
 Let's say you have an array of user IDs and you want to create an Observable stream that emits each ID individually.
 
 ```typescript
-import { Component, OnInit } from "@angular/core";
-import { from, Observable } from "rxjs"; // Import 'from'
-import { map } from "rxjs/operators";
+import { Component } from "@angular/core";
+import { AsyncPipe } from "@angular/common";
+import { from, map, toArray } from "rxjs";
 
 @Component({
   selector: "app-user-id-processor",
+  imports: [AsyncPipe],
   template: `
     <h4>Processing User IDs:</h4>
     <ul>
-      <li *ngFor="let processedId of processedUserIds$ | async">
-        {{ processedId }}
-      </li>
+      @for (processedId of processedUserIds$ | async; track processedId) {
+        <li>{{ processedId }}</li>
+      }
     </ul>
   `,
 })
-export class UserIdProcessorComponent implements OnInit {
-  userIds: string[] = ["user-001", "user-007", "user-101"];
-  processedUserIds$: Observable<string> | undefined;
+export class UserIdProcessorComponent {
+  private readonly userIds = ["user-001", "user-007", "user-101"];
 
-  ngOnInit(): void {
-    console.log("Component initializing...");
-
-    // Convert the userIds array into an Observable stream
-    const userIdStream$ = from(this.userIds);
-
-    // Example: Use RxJS operators on the stream from the array
-    this.processedUserIds$ = userIdStream$.pipe(
-      map((id) => `Processed: ${id.toUpperCase()}`), // Apply an operator to each emitted ID
-    );
-
-    console.log(
-      "Observable created from array. Subscribing manually for demonstration...",
-    );
-
-    this.processedUserIds$.subscribe({
-      next: (value) => {
-        // Called for each ID ('Processed: USER-001', 'Processed: USER-007', etc.)
-        console.log("Received processed ID:", value);
-      },
-      error: (err) => {
-        console.error("Error:", err); // Won't happen here
-      },
-      complete: () => {
-        // Called after the last ID is processed and emitted
-        console.log("User ID stream complete!");
-      },
-    });
-    console.log("Subscription processing for array finished (synchronously).");
-  }
+  // from() emits each ID separately so map runs per item;
+  // toArray() collects the results into one array for the template
+  protected readonly processedUserIds$ = from(this.userIds).pipe(
+    map((id) => `Processed: ${id.toUpperCase()}`),
+    toArray(),
+  );
 }
 ```
 
 ## Code Snippet 2 (Using `from()` with a Promise)
 
-Imagine you need to use the browser's `Workspace` API (which returns a Promise) to get some data and integrate it into your component's Observable-based logic.
+Imagine you need to use the browser's `fetch` API (which returns a Promise) to get some data and integrate it into your component's Observable-based logic.
 
 ```typescript
-import { Component, OnInit } from "@angular/core";
-import { from, Observable } from "rxjs"; // Import 'from'
-import { switchMap, catchError, tap } from "rxjs/operators";
+import { Component, signal } from "@angular/core";
+import { AsyncPipe, JsonPipe } from "@angular/common";
+import { catchError, from, of, tap } from "rxjs";
 
 @Component({
   selector: "app-promise-integrator",
+  imports: [AsyncPipe, JsonPipe],
   template: `
     <h4>Data from Promise:</h4>
-    <div *ngIf="data$ | async as fetchedData">
-      Data fetched: {{ fetchedData | json }}
-    </div>
-    <div *ngIf="errorMessage">Error: {{ errorMessage }}</div>
+    @if (data$ | async; as fetchedData) {
+      <div>Data fetched: {{ fetchedData | json }}</div>
+    }
+    @if (errorMessage()) {
+      <div>Error: {{ errorMessage() }}</div>
+    }
   `,
 })
-export class PromiseIntegratorComponent implements OnInit {
-  data$: Observable<any> | undefined;
-  errorMessage: string = "";
+export class PromiseIntegratorComponent {
+  protected readonly errorMessage = signal("");
 
-  ngOnInit(): void {
-    console.log("Component initializing...");
-
-    // 1. Create a Promise (e.g., using fetch)
-    const dataPromise = fetch("https://api.example.com/data") // Example API
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json(); // This also returns a Promise
-      });
-
-    console.log("Promise created. Converting to Observable using from()...");
-
-    // 2. Convert the Promise to an Observable using from()
-    const promiseAsObservable$ = from(dataPromise);
-
-    // 3. Use the Observable in your RxJS pipeline
-    this.data$ = promiseAsObservable$.pipe(
-      tap((data) =>
-        console.log("Data received from promise via Observable:", data),
-      ),
-      catchError((error) => {
-        // Handle potential errors from the promise (fetch failure, JSON parsing error)
-        console.error("Error emitted from promise Observable:", error);
-        this.errorMessage = error.message || "Failed to fetch data";
-        return from([]); // Return an empty observable to prevent killing the main stream
-        // Or: return throwError(() => new Error('Custom error message'));
-      }),
-    );
-
-    console.log(
-      "Subscribing to promise-based Observable (will resolve asynchronously)...",
-    );
-    // AsyncPipe in the template will handle the subscription here.
-    // Manual subscription for logging completion:
-    this.data$.subscribe({
-      next: () => {
-        /* Handled by tap above / AsyncPipe */
-      },
-      error: () => {
-        /* Handled by catchError above */
-      },
-      complete: () => {
-        // Called only if the promise resolves successfully and catchError doesn't replace the stream
-        if (!this.errorMessage) {
-          console.log("Promise-based Observable stream complete!");
-        }
-      },
-    });
-  }
+  // fetch() starts immediately (promises are eager);
+  // from() adapts the pending promise into an Observable
+  protected readonly data$ = from(
+    fetch("https://api.example.com/data").then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }),
+  ).pipe(
+    tap((data) => console.log("Data received from promise:", data)),
+    catchError((error) => {
+      // fetch failure, non-OK status, or JSON parsing error
+      this.errorMessage.set(error.message || "Failed to fetch data");
+      return of(null); // keep the template alive with no data
+    }),
+  );
 }
 ```
 
 **Explanation:**
 
-- **Array Example:** `from(this.userIds)` takes the array and emits each string element individually, allowing operators like `map` to work on each one.
-- **Promise Example:** `from(dataPromise)` takes the promise returned by `Workspace().then(...)`. It waits (asynchronously) for the promise to resolve. If it resolves successfully, the resolved JSON data is emitted as the `next` value. If the promise rejects (e.g., network error), `from()` emits an `error` notification, which we handle with `catchError`. The stream completes after the single value (or error) is emitted.
+- **Array Example:** `from(this.userIds)` takes the array and emits each string element individually, allowing operators like `map` to work on each one; `toArray()` then hands the template one complete list.
+- **Promise Example:** `from(promise)` waits (asynchronously) for the promise returned by `fetch().then(...)`. On resolution the JSON data is emitted as the `next` value; on rejection `from()` emits an `error` notification, handled by `catchError`. Note that the promise starts running the moment it is created, and unsubscribing from the Observable does not abort the underlying request; for lazy, per-subscription execution wrap it as `defer(() => from(fetch(...)))`, and for cancellable requests prefer Angular's `HttpClient`.
+
+## Common Mistakes
+
+**Confusing `from(array)` with `of(array)`.** Per-item emissions vs one array emission; the rest of the pipeline changes meaning entirely.
+
+**Treating `from(promise)` as lazy or cancellable.** The promise's work starts when the promise is created, not at subscribe time, and unsubscribing only ignores the result. Wrap in `defer` for laziness; use `HttpClient` when you need real cancellation.
+
+**Losing values behind the async pipe.** As with `of`, a stream of individual items shows only its latest value in the template. Collect with `toArray` (finite streams) or accumulate with `scan`.
+
+## Interview Q&A
+
+??? question "What input types does from() accept?"
+
+    Arrays and array-likes, iterables (Map, Set, strings, generators), promises and other thenables, and Observable-compatible objects. Arrays and iterables emit synchronously item by item; promises emit their single resolution value asynchronously.
+
+??? question "What happens when the promise passed to from() rejects?"
+
+    The rejection becomes an RxJS `error` notification: subscribers' error handler runs and the stream terminates. `catchError` downstream can convert it to a fallback, exactly like any other stream error.
+
+??? question "Does unsubscribing from from(promise) cancel the promise?"
+
+    No. Promises are not cancellable; the underlying work continues and its result is simply discarded. That difference (unsubscribe-driven cancellation) is one of the main arguments for Observables over promises in Angular HTTP code.
+
+## Related
+
+- [of](of.md) for emitting fixed values as-is
+- [Promise vs Observable](../../learn/promise-vs-observable.md) for the cancellation and laziness discussion
+- [switchMap](../transformation/switchMap.md), which accepts promises as inner values via the same conversion
 
 ## Summary
 
