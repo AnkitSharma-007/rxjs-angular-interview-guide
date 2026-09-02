@@ -116,7 +116,7 @@ export class LoadingBarComponent {
 
 ??? question "Do ActivatedRoute subscriptions need manual cleanup?"
 
-    The route-scoped streams complete when their route is destroyed, so bare subscriptions to them are mostly self-cleaning. Streams you derive from them that hop to other sources (HTTP, timers), and anything on `Router.events`, follow the normal cleanup rules.
+    Bare subscriptions to the route-scoped streams (`paramMap`, `data`) are mostly harmless, but for a precise reason: the `ActivatedRoute` and the component are destroyed together, so nothing outlives anything else. The streams do **not** complete; no terminal notification is delivered. Streams you derive from them that hop to other sources (HTTP, timers), and anything on `Router.events`, follow the normal cleanup rules.
 
 ??? question "How would you drive a global progress bar from the router?"
 

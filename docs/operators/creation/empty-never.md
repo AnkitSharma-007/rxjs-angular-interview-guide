@@ -21,13 +21,13 @@ Think of it like this: Both represent a stream that will _never give you any dat
     - **What it does:** Represents an Observable that emits **zero** items.
     - **Key Behavior:** It **never** sends a `complete` notification and **never** sends an `error` notification. It remains silent indefinitely after subscription.
     - **Analogy:** It's like a process that hangs forever without producing output or terminating, or a phone line that just keeps ringing and ringing without ever being answered or going to an error state. It signals "I have nothing for you right now, and I might _never_ have anything, and I'm certainly not finished."
-    - **Use Case:** Represents a stream that simply never emits or terminates. This can be useful in testing scenarios or when you want to keep a combination operator (like `race` or `combineLatest`) alive, even if one of its potential sources will never produce a relevant value or complete. It effectively keeps that "slot" open indefinitely without signalling completion or error. It can also be used intentionally to prevent parts of an Observable chain from completing.
+    - **Use Case:** Represents a stream that simply never emits or terminates. Useful in testing, and for deliberately preventing completion in operators where completion is what matters: a `NEVER` input keeps [`merge`](../combination/merge.md) or [`concat`](../combination/concat.md) from ever completing, and `switchMap(() => NEVER)` parks a pipeline until the next outer value. **It does not "keep `combineLatest` or `race` alive":** `combineLatest` needs every source to emit at least once, so a `NEVER` input suppresses all output permanently, and in `race` a `NEVER` contender simply loses and is unsubscribed.
 
 !!! abstract "At a glance"
 
     - **Signature:** `EMPTY` and `NEVER` are constants, not functions; import and use them directly
     - **Use `EMPTY` when:** a branch should produce nothing but still complete, typically inside `switchMap`/`concatMap` conditionals or `catchError`
-    - **Use `NEVER` when:** a stream must stay open silently: tests, keeping combinators alive, deliberately preventing completion
+    - **Use `NEVER` when:** a stream must stay open silently: tests, preventing completion in `merge`/`concat` pipelines, parking a branch inside a higher-order map
     - **Top gotcha:** returning `NEVER` where `EMPTY` was meant leaves queues (`concatMap`) and joins (`forkJoin`) waiting forever
 
 ## Direct Comparison
@@ -168,7 +168,7 @@ Choose `NEVER` when you need an Observable that does nothing and _never_ signals
 
 ??? question "What breaks if you use NEVER instead of EMPTY inside concatMap?"
 
-    `concatMap` waits for each inner Observable to complete before starting the next. `NEVER` never completes, so the queue stalls permanently: every later source value waits behind a stream that will not end. The same trap freezes `forkJoin` and delays `combineLatest` first emissions.
+    `concatMap` waits for each inner Observable to complete before starting the next. `NEVER` never completes, so the queue stalls permanently: every later source value waits behind a stream that will not end. The same trap freezes `forkJoin`, and a `NEVER` source in `combineLatest` blocks it from ever emitting, since every input must emit at least once.
 
 ??? question "Does subscribing to EMPTY require cleanup?"
 

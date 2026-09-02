@@ -107,7 +107,11 @@ export class TakeDemoComponent {
 
 ??? question "What is the difference between take(1) and first()?"
 
-    Both emit at most one value and complete. `first()` accepts an optional predicate and **errors** with `EmptyError` if the source completes without a matching value; `take(1)` never errors on empty completion. `first(predicate)` is also equivalent to `filter(predicate)` + `take(1)`.
+    Both emit at most one value and complete. `first()` accepts an optional predicate and **errors** with `EmptyError` if the source completes without a matching value; `take(1)` never errors on empty completion. That is why `first(predicate)` expands to `filter(predicate)` + `take(1)` + `throwIfEmpty()`: drop the `throwIfEmpty` and a no-match source completes silently instead of erroring.
+
+??? question "What does take(0) do?"
+
+    It completes immediately and emits nothing; the source is never even subscribed. A common edge-case probe, and occasionally useful when a computed count can legitimately be zero.
 
 ??? question "Why is take useful on infinite streams?"
 

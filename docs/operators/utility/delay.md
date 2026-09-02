@@ -161,14 +161,15 @@ export class SaveStatusComponent {
         // ---------------------
 
         catchError((err: Error) => {
-          // Handle the error AFTER the delay
-          console.error("UI: Handling error after delay:", err.message);
+          // Handle the error immediately (errors skip the delay)
+          console.error("UI: Handling error immediately:", err.message);
           this.isSuccess.set(false);
           this.statusMessage.set(`Error: ${err.message}`);
           // Return EMPTY to gracefully complete the stream for finalize
           return EMPTY;
         }),
-        // finalize runs after delay + next/error/complete
+        // finalize runs after next/complete pass through the delay;
+        // on the error path it runs immediately, since errors are not delayed
         finalize(() => {
           console.log('UI: Finalizing save operation (hiding "Saving...")');
           this.saving.set(false);

@@ -145,8 +145,7 @@ export class ProductSearchComponent implements OnInit {
 2.  **`searchTerm$`:** We get an Observable of the search term's changes using `valueChanges`. We apply:
     - `debounceTime(400)`: To wait until the user stops typing for 400ms before considering the term stable.
     - `distinctUntilChanged()`: To avoid triggering searches if the debounced term is the same as the last one.
-    - `startWith()`: To ensure the stream has an initial value so `withLatestFrom` can emit right away if the category also has a value. This makes the initial state work correctly.
-3.  **`categoryFilter$`:** We get an Observable of the category changes using `valueChanges`. We also use `startWith()` here for the initial value.
+3.  **`categoryFilter$`:** We get an Observable of the category changes using `valueChanges`, plus `startWith(control.value)` so the stream has a value before the user touches the dropdown. This seed is essential, and it belongs on the **secondary** stream: `withLatestFrom` silently drops source emissions until every secondary has produced at least one value, so without it, early searches would vanish.
 4.  **`withLatestFrom(categoryFilter$)`:** We pipe the `searchTerm$` (our source). When `searchTerm$` emits a value (after debouncing), `withLatestFrom` looks at `categoryFilter$` and gets its _most recently emitted value_.
 5.  **`subscribe(([term, category]) => ...)`:** The result is an array `[sourceValue, latestOtherValue]`. We destructure this into `term` and `category`. This callback function is executed _only_ when the debounced search term changes. Inside, we have exactly what we need: the current search term and the _latest_ selected category at that moment.
 6.  **`takeUntilDestroyed(this.destroyRef)`:** This is the modern Angular way to handle unsubscriptions. When the `ProductSearchComponent` is destroyed, this operator automatically completes the Observable stream, preventing memory leaks without manual cleanup.
