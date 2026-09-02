@@ -6,6 +6,8 @@ description: "An open-source RxJS interview guide for Angular developers: fundam
 
 Master RxJS for Angular interviews: clear explanations, realistic Angular examples, and side-by-side comparisons, organized so you can learn the concepts, look up operators fast, and revise before the interview.
 
+This guide covers **RxJS in depth, through an Angular lens**. It is deliberately not a general Angular interview guide: no dependency injection, change detection, or routing fundamentals here, only the reactive parts, and the Angular topics that an RxJS answer depends on.
+
 ## Where do you want to start?
 
 <div class="grid cards" markdown>
