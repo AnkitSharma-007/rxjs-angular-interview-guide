@@ -91,7 +91,7 @@ Day to day, Angular developers almost never pass schedulers explicitly:
 
 The cases where schedulers earn their keep:
 
-1. **Testing with virtual time.** RxJS's `TestScheduler` swaps the clock, so a `debounceTime(30000)` test finishes in milliseconds. This is the single most practical scheduler skill.
+1. **Testing with virtual time.** RxJS's `TestScheduler` swaps the clock, so a `debounceTime(30000)` test finishes in milliseconds. This is the single most practical scheduler skill, and it has its own page: [Marble Testing](marble-testing.md).
 2. **Animation-adjacent streams**, via `animationFrameScheduler`.
 3. **Breaking up synchronous floods.** A source that emits thousands of values synchronously can starve the main thread; `observeOn(asyncScheduler)` yields between deliveries.
 4. **Deliberate async boundaries.** Making a synchronous stream deliver asynchronously to keep API timing consistent (the same problem `asapScheduler` solves for Promise-like ordering).
@@ -102,7 +102,7 @@ The cases where schedulers earn their keep:
 
 **Reaching for schedulers to fix change detection.** If the view is not updating, the answer is signals, the async pipe, or fixing a broken subscription, not `observeOn`. Scheduler tweaks that "fix" rendering usually paper over a real bug.
 
-**Testing debounce logic with real timers.** Tests that `setTimeout`-wait for debounce windows are slow and flaky. Virtual time via `TestScheduler` runs the same logic deterministically and instantly.
+**Testing debounce logic with real timers.** Tests that `setTimeout`-wait for debounce windows are slow and flaky. Virtual time via `TestScheduler` runs the same logic deterministically and instantly; see [Marble Testing](marble-testing.md).
 
 ## Interview Q&A
 
@@ -116,7 +116,7 @@ The cases where schedulers earn their keep:
 
 ??? question "Why do schedulers matter for testing?"
 
-    Because operators ask the scheduler for the time instead of the real clock, tests can substitute virtual time. With `TestScheduler`, a pipeline full of `debounceTime` and `timer` calls runs deterministically in milliseconds, with marble diagrams describing expected timing.
+    Because operators ask the scheduler for the time instead of the real clock, tests can substitute virtual time. With `TestScheduler`, a pipeline full of `debounceTime` and `timer` calls runs deterministically in milliseconds, with marble diagrams describing expected timing. Worked examples live on the [Marble Testing](marble-testing.md) page.
 
 ??? question "Which scheduler does delay(1000) use if you pass nothing?"
 
