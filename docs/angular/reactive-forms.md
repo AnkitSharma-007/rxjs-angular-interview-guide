@@ -15,6 +15,10 @@ Reactive forms are stream factories: every control exposes `valueChanges` and `s
     - **Top gotcha:** neither stream emits the **initial** value; combine with `startWith(control.value)` when the pipeline needs it
     - **Second gotcha:** `setValue`/`patchValue` also trigger `valueChanges`; use `{ emitEvent: false }` to avoid feedback loops
 
+!!! warning "Zoneless change detection and form state"
+
+    Programmatic model updates (`setValue`, `patchValue`, `FormArray` mutations) update form state and emit through `valueChanges`/`statusChanges`, but they do **not** schedule change detection under Angular's default zoneless mode. Templates that display form-derived state must consume it through a notification source: pipe the form streams into signals with `toSignal`, or bind with the async pipe, as the patterns on this page do.
+
 ## Pattern 1: Debounced Search
 
 The canonical pipeline, covered in depth on [debounceTime](../operators/filtering/debounceTime.md) and [switchMap](../operators/transformation/switchMap.md):
