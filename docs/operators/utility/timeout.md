@@ -92,13 +92,7 @@ export class SlowDataService {
 **2. Data Fetching Component (Applies `timeout`)**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { JsonPipe } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { SlowDataService, ExternalData } from "./slow-data.service"; // Adjust path
@@ -132,11 +126,12 @@ import { EMPTY, TimeoutError, catchError, finalize, tap, timeout } from "rxjs";
     </div>
   `,
   // No 'styles' section as per previous request
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DataFetcherComponent {
-  private dataService = inject(SlowDataService);
-  private destroyRef = inject(DestroyRef);
+  private readonly dataService = inject(SlowDataService);
+  // getData() runs from the template, outside any injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- State Signals ---
   loading = signal<boolean>(false);

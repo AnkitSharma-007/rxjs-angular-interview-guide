@@ -127,14 +127,7 @@ export class UserService {
 **2. User Profile Component (`user-profile.component.ts`)**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  OnInit,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { UserService, UserData } from "./user.service";
 import { EMPTY, catchError, tap, finalize } from "rxjs";
@@ -159,16 +152,17 @@ import { EMPTY, catchError, tap, finalize } from "rxjs";
 
     <button (click)="loadProfile()" [disabled]="loading()">Load Profile</button>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserProfileComponent {
-  private userService = inject(UserService);
-  private destroyRef = inject(DestroyRef);
+  private readonly userService = inject(UserService);
+  // loadProfile() runs from the template, outside any injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- State Signals ---
-  userProfile = signal<UserData | null>(null);
-  loading = signal<boolean>(false);
-  errorMsg = signal<string | null>(null);
+  protected readonly userProfile = signal<UserData | null>(null);
+  protected readonly loading = signal<boolean>(false);
+  protected readonly errorMsg = signal<string | null>(null);
 
   loadProfile(): void {
     this.loading.set(true);

@@ -92,14 +92,7 @@ export class UserDataService {
 **2. User Profile Component (`user-profile.component.ts`) - Uses `tap`**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  OnInit,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { UserDataService, SimpleUser } from "./user-data.service"; // Adjust path
 import { EMPTY, Observable, catchError, delay, finalize, tap } from "rxjs";
@@ -127,11 +120,12 @@ import { EMPTY, Observable, catchError, delay, finalize, tap } from "rxjs";
       <p>Click a button to load user data.</p>
     }
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserProfileComponent {
-  private userDataService = inject(UserDataService);
-  private destroyRef = inject(DestroyRef);
+  private readonly userDataService = inject(UserDataService);
+  // loadUser() runs from the template, outside any injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- State Signals ---
   user = signal<SimpleUser | null>(null);

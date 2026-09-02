@@ -60,7 +60,7 @@ This is the most common use case in Angular. Imagine fetching user data from an 
 Let's create a component that tries to fetch user data. We'll use `catchError` to handle potential `HttpClient` errors.
 
 ```typescript
-import { Component, DestroyRef, inject, OnInit, signal } from "@angular/core";
+import { Component, DestroyRef, inject, signal } from "@angular/core";
 import { HttpClient, HttpErrorResponse } from "@angular/common/http";
 import { Observable, of, EMPTY, throwError, catchError, tap } from "rxjs";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
@@ -94,18 +94,20 @@ interface User {
     <button (click)="loadUser()" [disabled]="loading()">Reload User</button>
   `,
 })
-export class UserProfileComponent implements OnInit {
-  private http = inject(HttpClient);
-  private destroyRef = inject(DestroyRef);
+export class UserProfileComponent {
+  private readonly http = inject(HttpClient);
+  // loadUser() is re-invoked from the template, outside any injection
+  // context, so takeUntilDestroyed needs an explicit DestroyRef
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- State Signals ---
-  user = signal<User | null>(null);
-  loading = signal<boolean>(false);
-  errorMsg = signal<string | null>(null);
+  protected readonly user = signal<User | null>(null);
+  protected readonly loading = signal<boolean>(false);
+  protected readonly errorMsg = signal<string | null>(null);
 
   private userId = 1; // Example user ID
 
-  ngOnInit() {
+  constructor() {
     this.loadUser();
   }
 

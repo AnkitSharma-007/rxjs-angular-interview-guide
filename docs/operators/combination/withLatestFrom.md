@@ -56,7 +56,7 @@ saves$.next("save"); // ["save", "draft v2"]
 Let's see how this looks in an Angular component:
 
 ```typescript
-import { Component, inject, DestroyRef, OnInit, signal } from "@angular/core";
+import { Component, signal } from "@angular/core";
 import { ReactiveFormsModule, FormControl } from "@angular/forms";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import {
@@ -93,18 +93,22 @@ import {
     }
   `,
 })
-export class ProductSearchComponent implements OnInit {
-  // --- Dependencies ---
-  private destroyRef = inject(DestroyRef); // For automatic unsubscription
-
+export class ProductSearchComponent {
   // --- Form Controls ---
-  searchTermControl = new FormControl("", { nonNullable: true });
-  categoryFilterControl = new FormControl("all", { nonNullable: true });
+  protected readonly searchTermControl = new FormControl("", {
+    nonNullable: true,
+  });
+  protected readonly categoryFilterControl = new FormControl("all", {
+    nonNullable: true,
+  });
 
   // --- Component State ---
-  searchResults = signal<{ term: string; category: string } | null>(null);
+  protected readonly searchResults = signal<{
+    term: string;
+    category: string;
+  } | null>(null);
 
-  ngOnInit(): void {
+  constructor() {
     // --- Observables ---
     // Source: Search term, debounced
     const searchTerm$ = this.searchTermControl.valueChanges.pipe(
@@ -121,7 +125,7 @@ export class ProductSearchComponent implements OnInit {
     searchTerm$
       .pipe(
         withLatestFrom(categoryFilter$), // Combine search term with the LATEST category
-        takeUntilDestroyed(this.destroyRef), // Auto-unsubscribe when component is destroyed
+        takeUntilDestroyed(), // constructor is an injection context
       )
       .subscribe(([term, category]) => {
         // Runs ONLY when searchTerm$ emits (after debounce),

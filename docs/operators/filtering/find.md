@@ -105,14 +105,7 @@ export class UserStreamService {
 **2. Component Using `find`**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  OnInit,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal } from "@angular/core";
 import { JsonPipe } from "@angular/common"; // for the json pipe
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { UserStreamService, User } from "./user-stream.service"; // Adjust path
@@ -141,17 +134,15 @@ import { find, tap } from "rxjs";
     </div>
   `,
   // No 'styles' section
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FindAdminComponent implements OnInit {
-  private userStreamService = inject(UserStreamService);
-  private destroyRef = inject(DestroyRef);
+export class FindAdminComponent {
+  private readonly userStreamService = inject(UserStreamService);
 
   // --- State Signals ---
-  foundAdmin = signal<User | undefined>(undefined); // Result can be User or undefined
-  searchComplete = signal<boolean>(false); // Track if the find operation finished
+  protected readonly foundAdmin = signal<User | undefined>(undefined); // Result can be User or undefined
+  protected readonly searchComplete = signal<boolean>(false); // Track if the find operation finished
 
-  ngOnInit(): void {
+  constructor() {
     console.log("FindAdminComponent: Subscribing to find the first admin...");
 
     this.userStreamService
@@ -166,7 +157,7 @@ export class FindAdminComponent implements OnInit {
         find((user) => user.isAdmin === true),
         // --------------------------------
 
-        takeUntilDestroyed(this.destroyRef), // Standard cleanup
+        takeUntilDestroyed(), // constructor is an injection context
       )
       .subscribe({
         next: (adminUser) => {
@@ -203,7 +194,7 @@ export class FindAdminComponent implements OnInit {
 **Explanation:**
 
 1.  `UserStreamService` provides an Observable `getUsers()` that emits user objects sequentially with a delay.
-2.  `FindAdminComponent` subscribes to this stream in `ngOnInit`.
+2.  `FindAdminComponent` subscribes to this stream in its constructor.
 3.  **`find(user => user.isAdmin === true)`**: This is the core. For each user emitted by `getUsers()`:
     - The predicate `user => user.isAdmin === true` is evaluated.
     - It checks Alice (false), Bob (false).

@@ -59,7 +59,7 @@ Another scenario (less common for APIs, more for UI events or other streams): Su
 Let's create a simple Angular component example using `zip`. We'll zip together values from two simple streams: one emitting letters ('A', 'B', 'C') quickly, and another emitting numbers (10, 20, 30, 40) more slowly.
 
 ```typescript
-import { Component, DestroyRef, inject, OnInit, signal } from "@angular/core";
+import { Component, signal } from "@angular/core";
 import { JsonPipe } from "@angular/common";
 import { interval, map, of, take, zip } from "rxjs";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
@@ -88,12 +88,10 @@ import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
     `,
   ],
 })
-export class ZipExampleComponent implements OnInit {
-  private destroyRef = inject(DestroyRef);
+export class ZipExampleComponent {
+  protected readonly zippedResult = signal<Array<[string, number]>>([]); // Signal to hold the result
 
-  zippedResult = signal<Array<[string, number]>>([]); // Signal to hold the result
-
-  ngOnInit() {
+  constructor() {
     // Source 1: Emits 'A', 'B', 'C' one after another immediately
     const letters$ = of("A", "B", "C");
 
@@ -107,7 +105,7 @@ export class ZipExampleComponent implements OnInit {
     zip(letters$, numbers$)
       .pipe(
         // zip emits arrays like [string, number]
-        takeUntilDestroyed(this.destroyRef), // Auto-unsubscribe
+        takeUntilDestroyed(), // constructor is an injection context
       )
       .subscribe({
         next: (value) => {

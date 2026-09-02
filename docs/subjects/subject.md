@@ -147,14 +147,7 @@ export class HeaderComponent {
 **3. User Profile Component - Listens for Changes**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  OnInit,
-  DestroyRef,
-  ChangeDetectionStrategy,
-} from "@angular/core";
+import { Component, inject, signal } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { AuthService, User } from "./auth.service"; // Adjust path if needed
 
@@ -181,21 +174,19 @@ import { AuthService, User } from "./auth.service"; // Adjust path if needed
       }
     `,
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush, // Good practice with signals/observables
 })
-export class UserProfileComponent implements OnInit {
-  private authService = inject(AuthService);
-  private destroyRef = inject(DestroyRef);
+export class UserProfileComponent {
+  private readonly authService = inject(AuthService);
 
   // Use a signal to hold the user state for the template
-  loggedInUser = signal<User | null>(null);
+  protected readonly loggedInUser = signal<User | null>(null);
 
-  ngOnInit(): void {
+  constructor() {
     // Subscribe to the service's Observable
     this.authService.userLoginStatus$
       .pipe(
-        // Automatically unsubscribe when the component is destroyed
-        takeUntilDestroyed(this.destroyRef),
+        // constructor runs in an injection context, so no DestroyRef needed
+        takeUntilDestroyed(),
       )
       .subscribe((user) => {
         // Update the signal when a new status is broadcast by the Subject
@@ -233,7 +224,7 @@ export class AppComponent {}
 1.  The `AuthService` creates a `Subject` (`userLoginStatusSubject`) to manage the login state.
 2.  It exposes only an `Observable` (`userLoginStatus$`) derived from the subject using `.asObservable()`. This is good practice – it prevents components from accidentally calling `next()` on the service's subject. Only the service itself controls when broadcasts happen.
 3.  When `authService.login()` or `authService.logout()` is called (triggered by `HeaderComponent`), the service calls `this.userLoginStatusSubject.next(...)`, pushing the new user data (or `null`) into the Subject.
-4.  The `UserProfileComponent` subscribes to `authService.userLoginStatus$` in its `ngOnInit`.
+4.  The `UserProfileComponent` subscribes to `authService.userLoginStatus$` in its constructor.
 5.  Whenever the Subject broadcasts a new value, the subscription in `UserProfileComponent` receives it, and updates the `loggedInUser` signal, causing the component's template to reactively display the current status.
 6.  `takeUntilDestroyed` ensures the subscription is cleaned up when the `UserProfileComponent` is destroyed.
 

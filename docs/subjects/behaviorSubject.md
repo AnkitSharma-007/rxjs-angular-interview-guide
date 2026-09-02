@@ -143,15 +143,7 @@ export class ThemeSwitcherComponent {
 **3. Themed Content Component - Reacts to the theme**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  OnInit,
-  DestroyRef,
-  ChangeDetectionStrategy,
-  HostBinding,
-} from "@angular/core";
+import { Component, inject, signal, HostBinding } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { ThemeService, AppTheme } from "./theme.service"; // Adjust path
 
@@ -185,30 +177,28 @@ import { ThemeService, AppTheme } from "./theme.service"; // Adjust path
       }
     `,
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ThemedContentComponent implements OnInit {
-  private themeService = inject(ThemeService);
-  private destroyRef = inject(DestroyRef);
+export class ThemedContentComponent {
+  private readonly themeService = inject(ThemeService);
 
   // Signal to hold the current theme for the template
-  currentThemeSignal = signal<AppTheme>("light"); // Initialize with default
+  protected readonly currentThemeSignal = signal<AppTheme>("light"); // Initialize with default
 
   // Use HostBinding to apply theme class to the component's host element
   @HostBinding("class.dark-theme") isDark = false;
   @HostBinding("class.light-theme") isLight = true;
 
-  ngOnInit(): void {
+  constructor() {
     // Subscribe to the theme state from the service
     this.themeService.theme$
       .pipe(
-        // Automatically unsubscribe when the component is destroyed
-        takeUntilDestroyed(this.destroyRef),
+        // constructor runs in an injection context, so no DestroyRef needed
+        takeUntilDestroyed(),
       )
       .subscribe((theme) => {
         // *** Key Point ***
-        // This code runs IMMEDIATELY when ngOnInit executes because
-        // BehaviorSubject emits the current value ('light') upon subscription.
+        // This code runs IMMEDIATELY on subscription because
+        // BehaviorSubject emits the current value ('light') right away.
         console.log(`ThemedContentComponent received theme: ${theme}`);
 
         // Update the signal for the template
@@ -245,7 +235,7 @@ export class AppComponent {}
 
 1.  `ThemeService` creates a `BehaviorSubject` called `themeSubject` initialized with `'light'`.
 2.  It exposes `theme$` as an observable.
-3.  When `ThemedContentComponent` initializes (`ngOnInit`), it subscribes to `themeService.theme$`.
+3.  When `ThemedContentComponent` initializes, its constructor subscribes to `themeService.theme$`.
 4.  **Crucially:** Because it's a `BehaviorSubject`, the subscription immediately receives the _current_ value (`'light'`) without waiting for `setTheme` to be called. The component can instantly update its `currentThemeSignal` and apply the correct styling.
 5.  When the user clicks buttons in `ThemeSwitcherComponent`, `themeService.setTheme()` is called.
 6.  This calls `themeSubject.next(newTheme)`, broadcasting the new theme to all subscribers.

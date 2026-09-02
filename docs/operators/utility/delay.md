@@ -57,13 +57,7 @@ Imagine clicking a "Save" button. The backend operation might be incredibly fast
 ## Code Snippet
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import {
   EMPTY,
@@ -126,10 +120,11 @@ function mockSaveOperation(): Observable<{
       }
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SaveStatusComponent {
-  private destroyRef = inject(DestroyRef);
+  // saveData() runs from the template, outside any injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- State Signals ---
   saving = signal<boolean>(false);

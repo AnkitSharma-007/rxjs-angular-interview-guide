@@ -35,7 +35,7 @@ Crucially, **each time you subscribe** to a cold Observable, it starts its work 
 
     ```typescript
     // In some component:
-    ngOnInit() {
+    constructor() {
       console.log("Subscribing first time to getItems...");
       this.dataService.getItems().subscribe(data => {
         console.log("First subscription received data.");
