@@ -54,6 +54,7 @@ Imagine your Angular application needs to load some initial configuration data w
 
 ```typescript
 import { Component, signal } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { first, catchError, EMPTY, throwError, timer, map, concat } from "rxjs";
 import { EmptyError } from "rxjs";
 
@@ -81,7 +82,9 @@ export class FirstDemoComponent {
       `[${new Date().toLocaleTimeString()}] Subscribing to find first 'active' status...`,
     );
 
-    // no teardown needed: first() emits once, then completes the stream itself
+    // first() ends the stream only when a match (or completion/error)
+    // arrives; until then the timer chain is live, so tie the wait to the
+    // component's lifetime
     statusUpdates$
       .pipe(
         first((status) => status === "active"),
@@ -101,6 +104,7 @@ export class FirstDemoComponent {
             return throwError(() => error);
           }
         }),
+        takeUntilDestroyed(), // constructor is an injection context
       )
       .subscribe({
         next: (activeStatus) => {

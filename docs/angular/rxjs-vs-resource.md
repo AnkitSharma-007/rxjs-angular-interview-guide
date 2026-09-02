@@ -18,7 +18,7 @@ Angular ships a signals-native answer for async data: `resource`, its HTTP wrapp
 
 ## What a resource gives you
 
-A resource is a reactive fetch bound to signal inputs. When the `params` computation changes, the loader re-runs and the previous request is aborted:
+A resource is a reactive fetch bound to signal inputs. When the `params` computation changes, the loader re-runs and the previous request is dropped. One cancellation nuance up front: `httpResource` genuinely **cancels** the stale HTTP request, while the generic `resource()` only signals its loader's `AbortSignal`; the underlying work stops only if the loader honors that signal (for example by passing it to `fetch`).
 
 ```typescript
 import { Component, inject, input } from "@angular/core";
@@ -85,11 +85,11 @@ The pipeline keeps its RxJS powers; the template gets `value()`, `isLoading()`, 
 
 ??? question "Why not just use httpResource for the typeahead search?"
 
-    Because typeahead is mostly not a fetching problem. The pipeline needs debouncing (a resource's `params` reacts to every keystroke instantly) and deliberate cancellation of the settled-but-stale request. A resource does abort on params changes, but it cannot debounce, dedupe, or throttle them. The strong answer: debounce and shape the stream with RxJS, then hand the final fetch to `rxResource`, or keep `switchMap` + `toSignal`.
+    Because typeahead is mostly not a fetching problem. The pipeline needs debouncing (a resource's `params` reacts to every keystroke instantly) and deliberate cancellation of the settled-but-stale request. `httpResource` does cancel its stale request on params changes (a custom `resource()` loader must honor the `AbortSignal` itself), but no resource can debounce, dedupe, or throttle its inputs. The strong answer: debounce and shape the stream with RxJS, then hand the final fetch to `rxResource`, or keep `switchMap` + `toSignal`.
 
 ??? question "When would you actively choose a resource over a stream?"
 
-    Parameter-driven reads with standard loading/error UI: detail pages keyed by a route param or input signal, dashboards re-fetching on filter changes. The resource's abort-on-change covers the stale-response problem, `reload()` covers refresh, and there is less code to review.
+    Parameter-driven reads with standard loading/error UI: detail pages keyed by a route param or input signal, dashboards re-fetching on filter changes. `httpResource`'s cancel-on-change covers the stale-response problem (custom loaders get an `AbortSignal` to honor), `reload()` covers refresh, and there is less code to review.
 
 ??? question "Does the Resource API make shareReplay-style caching obsolete?"
 
