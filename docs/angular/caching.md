@@ -53,7 +53,7 @@ export class UserListService {
 }
 ```
 
-Mutations call `invalidate()` after a successful write; every consumer, template or effect, updates automatically. This trigger + `switchMap` + `shareReplay` trio is the single most useful caching pattern to know by heart.
+Mutations call `invalidate()` after a successful write; every consumer, template or effect, updates automatically. This trigger + `switchMap` + `shareReplay` trio is the single most useful caching pattern to know by heart. (For a single consumer, Angular's Resource API covers this exact case with `reload()`; the trigger design earns its keep when the cache is **shared**, see [RxJS or the Resource API?](rxjs-vs-resource.md))
 
 ## Level 3: Per-Key Caches
 

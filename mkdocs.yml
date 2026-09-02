@@ -88,6 +88,7 @@ nav:
       - angular/index.md
       - "Async Pipe": angular/async-pipe.md
       - "Signals & RxJS Interop": angular/signals-interop.md
+      - "RxJS or the Resource API?": angular/rxjs-vs-resource.md
       - "HttpClient Patterns": angular/http-patterns.md
       - "Reactive Forms": angular/reactive-forms.md
       - "Router": angular/router.md
