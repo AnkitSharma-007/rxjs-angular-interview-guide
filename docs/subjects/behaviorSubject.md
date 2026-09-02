@@ -36,7 +36,7 @@ Like a regular `Subject`, it still multicasts – pushing values to all current 
     - The latest value of filters applied to a list.
     - Configuration settings.
 2.  **Providing Initial Data:** Components often need to know the _current_ state as soon as they initialize to render correctly. `BehaviorSubject` guarantees they get a value immediately upon subscription.
-3.  **Synchronous Access (Use Sparingly):** `BehaviorSubject` has a `getValue()` method that allows you to synchronously get its current value _without_ subscribing. While useful occasionally, relying heavily on this can be an anti-pattern compared to reactive subscriptions. Signals often provide a better way to get current values reactively.
+3.  **Synchronous Access (Use Sparingly):** `BehaviorSubject` has a `getValue()` method that allows you to synchronously get its current value _without_ subscribing. While useful occasionally, relying heavily on this can be an anti-pattern compared to reactive subscriptions. Signals often provide a better way to get current values reactively. Terminal-state behavior is worth knowing: after `complete()`, `getValue()` still returns the last value; after `error()`, it **rethrows that error**; after `unsubscribe()`, it throws `ObjectUnsubscribedError`.
 
 ## Minimal Example
 

@@ -140,7 +140,7 @@ Using `debounceTime` here dramatically improves user experience and reduces unne
 
 ??? question "What happens to the values emitted during the quiet-period timer?"
 
-    Each new value replaces the pending one and restarts the timer; the replaced values are discarded permanently. `debounceTime` is lossy by design, which is exactly why it fits "only the final intent matters" inputs.
+    Each new value replaces the pending one and restarts the timer; the replaced values are discarded permanently. One exception at the end of life: if the source **completes** while a value is pending, that value is flushed before the completion (an error, by contrast, discards it). `debounceTime` is lossy by design, which is exactly why it fits "only the final intent matters" inputs.
 
 ## Related
 

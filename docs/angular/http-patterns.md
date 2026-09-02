@@ -26,7 +26,8 @@ type State<T> =
 @Component({
   selector: "app-products",
   template: `
-    @switch (state().status) {
+    @let s = state();
+    @switch (s.status) {
       @case ("loading") {
         <p>Loading...</p>
       }
@@ -34,7 +35,7 @@ type State<T> =
         <p>Could not load products.</p>
       }
       @case ("loaded") {
-        <p>{{ $any(state()).data.length }} products</p>
+        <p>{{ s.data.length }} products</p>
       }
     }
   `,

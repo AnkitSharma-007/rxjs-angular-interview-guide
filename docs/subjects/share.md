@@ -13,7 +13,7 @@ However, `share` behaves like it's using a plain `Subject` internally for multic
 1.  **Shares a Single Subscription:** It subscribes to the source Observable only when the _first_ subscriber arrives.
 2.  **Multicasts Live Values:** It pushes values from the source to all _currently active_ subscribers.
 3.  **No Replay:** If a subscriber joins _after_ the source has already emitted some values, that new subscriber **will not** receive those past values. They will only get emissions that happen _after_ they subscribed.
-4.  **Reference Counting:** It uses reference counting (`refCount` is implicitly true). The subscription to the source is active only as long as there's at least one downstream subscriber. When the last subscriber leaves, `share` unsubscribes from the source. If a new subscriber arrives later, it will re-subscribe to the source, potentially restarting it.
+4.  **Reference Counting & Resets:** `share()` tracks its subscribers and unsubscribes from the source when the count drops to zero (`resetOnRefCountZero: true`, the default). It also resets when the source **completes or errors** (`resetOnComplete: true`, `resetOnError: true`), so a subscriber arriving after completion re-executes the source instead of joining a finished one. If a new subscriber arrives later, it re-subscribes to the source, potentially restarting it.
 
 !!! abstract "At a glance"
 

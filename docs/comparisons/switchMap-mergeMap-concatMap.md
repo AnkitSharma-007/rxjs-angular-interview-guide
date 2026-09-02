@@ -19,7 +19,7 @@ Here’s a theoretical comparison:
     - **Order:** Output values come only from the most recent inner Observable. The order depends on that inner Observable, but older inner streams are cancelled entirely.
     - **Use When:** You only care about the results corresponding to the **most recent** source emission. Useful for scenarios like type-ahead search suggestions where previous requests become irrelevant.
 
-2.  **`mergeMap` (alias: `flatMap`)**
+2.  **`mergeMap`** (its old alias `flatMap` still exists but is deprecated and slated for removal)
     - **Strategy:** Concurrency / Merging.
     - **Behavior:** When the source Observable emits a value, `mergeMap` maps it to an inner Observable and subscribes. If the source emits a _new_ value, `mergeMap` **does not cancel** any previous inner Observables. It simply creates and subscribes to the new inner Observable, allowing multiple inner Observables to run **concurrently**.
     - **Concurrency:** Can have multiple inner Observables running in parallel. The level of concurrency can optionally be limited by passing a second argument to `mergeMap`.

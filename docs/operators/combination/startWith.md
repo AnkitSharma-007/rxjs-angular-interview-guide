@@ -47,7 +47,8 @@ type ViewState =
 @Component({
   selector: "app-user-list",
   template: `
-    @switch (state().status) {
+    @let s = state();
+    @switch (s.status) {
       @case ("loading") {
         <p>Loading users...</p>
       }
@@ -56,7 +57,7 @@ type ViewState =
       }
       @case ("loaded") {
         <ul>
-          @for (user of $any(state()).users; track user) {
+          @for (user of s.users; track user) {
             <li>{{ user }}</li>
           }
         </ul>

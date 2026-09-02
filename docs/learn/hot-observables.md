@@ -113,7 +113,8 @@ Remember, Cold Observables only start when you subscribe, and each subscription 
       constructor() {
         console.log("UserService: Setting up shared user profile fetch.");
         this.userProfile$ = this.http.get("/api/user/profile").pipe(
-          shareReplay(1), // Cache the latest value and share across subscribers
+          // explicit config beats bare shareReplay(1); see the shareReplay page
+          shareReplay({ bufferSize: 1, refCount: true }),
         );
       }
 

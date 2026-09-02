@@ -17,7 +17,7 @@ Unlike the timing operators (`debounceTime`, `sampleTime`), nothing is dropped: 
 
 !!! abstract "At a glance"
 
-    - **Signatures:** `buffer(notifier$)`, `bufferTime(span, creationInterval?, maxSize?)`, `bufferCount(size, startEvery?)`
+    - **Signatures:** `buffer(notifier$)`, `bufferTime(span, creationInterval?, maxBufferSize?)`, `bufferCount(size, startEvery?)`
     - **Use when:** values should be processed in batches rather than one by one: bulk API writes, analytics batching, grouping rapid events
     - **Avoid when:** only the latest value matters (`sampleTime`, `auditTime`) or values need individual handling
     - **Top gotcha:** `bufferTime` emits **empty arrays** on quiet windows; filter them out before acting on each batch

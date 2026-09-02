@@ -18,7 +18,7 @@ HTTP interceptors are RxJS pipelines: an interceptor receives the request, calls
 
 ```typescript
 import { HttpErrorResponse, HttpInterceptorFn } from "@angular/common/http";
-import { retry, throwError, timeout, timer } from "rxjs";
+import { retry, throwError, timeout, TimeoutError, timer } from "rxjs";
 
 export const resilienceInterceptor: HttpInterceptorFn = (req, next) => {
   // only idempotent requests are safe to retry blindly
@@ -28,9 +28,11 @@ export const resilienceInterceptor: HttpInterceptorFn = (req, next) => {
     timeout(10_000), // bound every attempt
     retry({
       count: retryCount,
-      delay: (error: HttpErrorResponse, attempt) =>
-        // transient failures only: network errors and 5xx
-        error.status === 0 || error.status >= 500
+      // transient failures only: timeouts, network errors, and 5xx
+      delay: (error: unknown, attempt) =>
+        error instanceof TimeoutError ||
+        (error instanceof HttpErrorResponse &&
+          (error.status === 0 || error.status >= 500))
           ? timer(500 * Math.pow(2, attempt - 1)) // 500ms, 1s backoff
           : throwError(() => error),
     }),

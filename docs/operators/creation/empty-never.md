@@ -60,96 +60,57 @@ NEVER.subscribe({
 ## Code Snippet Demonstration
 
 ```typescript
-import { Component, OnInit, OnDestroy } from "@angular/core";
-import { EMPTY, NEVER, Subscription } from "rxjs";
+import { Component, signal } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { EMPTY, NEVER } from "rxjs";
 
 @Component({
   selector: "app-empty-never-demo",
   template: `
     <h4>EMPTY vs NEVER Demo</h4>
     <p>Check the console log.</p>
-    <p>EMPTY Status: {{ emptyStatus }}</p>
-    <p>NEVER Status: {{ neverStatus }}</p>
+    <p>EMPTY Status: {{ emptyStatus() }}</p>
+    <p>NEVER Status: {{ neverStatus() }}</p>
   `,
 })
-export class EmptyNeverDemoComponent implements OnInit, OnDestroy {
-  emptyStatus = "Subscribing...";
-  neverStatus = "Subscribing...";
+export class EmptyNeverDemoComponent {
+  protected readonly emptyStatus = signal("Subscribing...");
+  protected readonly neverStatus = signal("Subscribing...");
 
-  private emptySub: Subscription | undefined;
-  private neverSub: Subscription | undefined;
-
-  ngOnInit(): void {
-    console.log(`--- Subscribing to EMPTY ---`);
-    this.emptySub = EMPTY.subscribe({
-      next: () => {
-        console.log("EMPTY: next (This will not be logged)");
-        this.emptyStatus = "Got next (unexpected)";
-      },
-      error: (err) => {
-        console.error("EMPTY: error", err);
-        this.emptyStatus = `Error: ${err}`;
-      },
+  constructor() {
+    console.log("--- Subscribing to EMPTY ---");
+    // EMPTY completes synchronously on subscribe; no teardown needed
+    EMPTY.subscribe({
+      next: () => this.emptyStatus.set("Got next (unexpected)"),
       complete: () => {
-        // This is called immediately!
-        console.log(
-          `EMPTY: complete! (Called immediately) at ${new Date().toLocaleTimeString()}`,
-        );
-        this.emptyStatus = "Completed immediately";
+        // called immediately, before the subscribe() call even returns
+        console.log("EMPTY: complete! (Called immediately)");
+        this.emptyStatus.set("Completed immediately");
       },
     });
-    // The line below will likely log 'Completed immediately' because EMPTY completes synchronously
-    console.log(
-      `Current EMPTY status after sync subscribe: ${this.emptyStatus}`,
-    );
+    console.log(`EMPTY status right after subscribe: ${this.emptyStatus()}`);
 
-    console.log(`\n--- Subscribing to NEVER ---`);
-    this.neverSub = NEVER.subscribe({
-      next: () => {
-        console.log("NEVER: next (This will not be logged)");
-        this.neverStatus = "Got next (unexpected)";
-      },
-      error: (err) => {
-        console.error("NEVER: error (This will not be logged)");
-        this.neverStatus = `Error: ${err}`;
-      },
-      complete: () => {
-        // This is never called!
-        console.log("NEVER: complete! (This will never be logged)");
-        this.neverStatus = "Completed (unexpected)";
-      },
+    console.log("--- Subscribing to NEVER ---");
+    // NEVER never terminates on its own; tie the subscription to the
+    // component's lifetime or it leaks
+    NEVER.pipe(takeUntilDestroyed()).subscribe({
+      next: () => this.neverStatus.set("Got next (unexpected)"),
+      complete: () =>
+        // NEVER itself never completes; this fires only because
+        // takeUntilDestroyed completes the stream on destroy
+        console.log("NEVER: complete (from takeUntilDestroyed on destroy)"),
     });
-    // NEVER does nothing, so status remains 'Subscribing...'
-    console.log(
-      `Current NEVER status after sync subscribe: ${this.neverStatus}`,
-    );
+    console.log(`NEVER status right after subscribe: ${this.neverStatus()}`);
 
-    // Set a timeout just to show NEVER doesn't complete on its own
+    // show that NEVER does not complete on its own
     setTimeout(() => {
-      if (this.neverStatus === "Subscribing...") {
+      if (this.neverStatus() === "Subscribing...") {
         console.log(
-          "\nAfter 2 seconds, NEVER still hasn't emitted or completed.",
+          "After 2 seconds, NEVER still has not emitted or completed.",
         );
-        this.neverStatus = "Still running after 2s (as expected)";
+        this.neverStatus.set("Still running after 2s (as expected)");
       }
     }, 2000);
-  }
-
-  ngOnDestroy(): void {
-    console.log("\n--- Component Destroying ---");
-    if (this.emptySub && !this.emptySub.closed) {
-      // This check is usually false as EMPTY completes immediately
-      console.log("Unsubscribing from EMPTY (already closed likely).");
-      this.emptySub.unsubscribe();
-    } else {
-      console.log("EMPTY subscription was already closed.");
-    }
-
-    if (this.neverSub && !this.neverSub.closed) {
-      // This is important for NEVER if the component is destroyed
-      console.log("Unsubscribing from NEVER.");
-      this.neverSub.unsubscribe();
-    }
   }
 }
 ```
