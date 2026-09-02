@@ -25,6 +25,7 @@ Think of it like starting several independent tasks (e.g., downloading multiple 
 3.  **Single Emission:** It emits only _one_ value (or an error).
 4.  **Array of Last Values:** The emitted value is an array containing the _last_ value from each input Observable.
 5.  **Error Behavior:** If _any_ of the input Observables error out, `forkJoin` immediately errors out as well. It will _not_ wait for the other Observables to complete and will _not_ emit the array of results.
+6.  **Empty-Completion Behavior:** If any input completes without ever emitting (like `EMPTY`), `forkJoin` completes immediately **with no emission**: there is no last value to report for that slot, so the whole join produces nothing.
 
 ## Minimal Example
 

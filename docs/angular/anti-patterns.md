@@ -23,14 +23,18 @@ No cancellation (stale responses race), no unified error handling, leak-prone in
 
 ```typescript
 // FIX: flatten with a higher-order operator
+protected readonly user = signal<User | null>(null);
+
 this.route.paramMap
   .pipe(
     map((params) => params.get("id")!),
     switchMap((id) => this.api.getUser(id)),
     takeUntilDestroyed(),
   )
-  .subscribe((user) => (this.user = user));
+  .subscribe((user) => this.user.set(user));
 ```
+
+Note the subscribe callback writes to a **signal**, not a plain field. Under Angular's default zoneless change detection, a signal read in the template is what schedules a render; `this.user = user` on a plain field would update the value and never the view.
 
 The choice of [`switchMap`](../operators/transformation/switchMap.md)/[`concatMap`](../operators/transformation/concatMap.md)/[`exhaustMap`](../operators/transformation/exhaustMap.md) is the follow-up question; have a reason ready.
 
@@ -48,7 +52,9 @@ stream$.subscribe((data) => {
 Untestable, unreusable, invisible to operators downstream.
 
 ```typescript
-// FIX: declare the transformation in the pipe; subscribe only assigns
+// FIX: declare the transformation in the pipe; subscribe only writes the signal
+protected readonly names = signal<string[]>([]);
+
 stream$
   .pipe(
     map((data) =>
@@ -56,7 +62,7 @@ stream$
     ),
     filter((names) => names.length > 0),
   )
-  .subscribe((names) => (this.names = names));
+  .subscribe((names) => this.names.set(names));
 ```
 
 ## 3. Exposing Raw Subjects
@@ -90,7 +96,7 @@ protected readonly items = toSignal(this.api.getItems(), { initialValue: [] });
 // or in the template: @if (items$ | async; as items) { ... }
 ```
 
-Manual subscriptions are for side effects; display data belongs to [`toSignal`](signals-interop.md) or the [async pipe](async-pipe.md).
+Manual subscriptions are for side effects; display data belongs to [`toSignal`](signals-interop.md) or the [async pipe](async-pipe.md). The smell has a second failure mode on top of the boilerplate: the plain-field assignment is not a change-detection notification source, so under Angular's default zoneless mode the view never updates from it at all.
 
 ## 5. `shareReplay` With Default Config on Infinite Sources
 

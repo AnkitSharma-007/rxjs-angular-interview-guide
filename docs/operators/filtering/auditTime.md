@@ -95,7 +95,7 @@ export class DragTrackerComponent {
 
 ??? question "auditTime vs throttleTime: what is the real difference?"
 
-    Default `throttleTime` is leading-edge: it emits the first value of a burst, then drops the rest of the window. `auditTime` is trailing-edge: it stays silent for the window and then emits the latest value. `throttleTime(d, undefined, { leading: false, trailing: true })` behaves very similarly to `auditTime(d)`; the practical rule is throttle for instant first response, audit for freshest periodic state.
+    Default `throttleTime` is leading-edge: it emits the first value of a burst, then drops the rest of the window. `auditTime` is trailing-edge: it stays silent for the window and then emits the latest value. `throttleTime(d, undefined, { leading: false, trailing: true })` is similar in intent but **not equivalent**: throttle anchors fixed windows to emissions during a window, audit starts a fresh window on each emission after idle. On `interval(100).pipe(take(10))`, `auditTime(350)` emits 3, 7, 9 while trailing `throttleTime(350)` emits 3, 6, 9. The practical rule stands: throttle for instant first response, audit for freshest periodic state.
 
 ??? question "auditTime vs sampleTime?"
 

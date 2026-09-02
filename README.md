@@ -21,6 +21,8 @@ An open-source interview preparation site for Angular developers. It covers RxJS
 - Engineers who want a structured refresher on reactive programming in Angular
 - Interviewers sourcing questions, scenarios, and coding exercises
 
+The scope is deliberate: RxJS in depth, through an Angular lens. This is not a general Angular interview guide. Dependency injection, change detection mechanics, and routing fundamentals are out of scope except where an RxJS answer depends on them.
+
 ## Content principles
 
 - **Evergreen.** No version numbers in content. Examples follow the current [angular.dev](https://angular.dev/) and [rxjs.dev](https://rxjs.dev/) documentation: standalone components, signals, `inject()`, built-in control flow, and `takeUntilDestroyed`.

@@ -10,7 +10,7 @@ Think of the `async` pipe as a smart assistant for handling asynchronous data ri
 
 1.  **Subscribes:** When the component loads, the `async` pipe automatically subscribes to the Observable (or Promise) you provide it.
 2.  **Unwraps Values:** When the Observable emits a new value, the `async` pipe "unwraps" that value and makes it available for binding in your template.
-3.  **Triggers Change Detection:** It automatically tells Angular to check the component for changes whenever a new value arrives, ensuring your view updates.
+3.  **Triggers Change Detection:** It calls `markForCheck()` on every emission. Under Angular's default zoneless change detection this is not a convenience, it is the reason the binding updates at all: nothing else notifies Angular that a new value arrived.
 4.  **Unsubscribes Automatically:** This is a huge benefit! When the component is destroyed, the `async` pipe automatically unsubscribes from the Observable, preventing potential memory leaks. You don't need manual unsubscription logic (like `takeUntilDestroyed` or `.unsubscribe()`) _for the subscription managed by the pipe itself_.
 5.  **Handles Null/Undefined Initially:** Before the Observable emits its first value, the `async` pipe typically returns `null`, which you can handle gracefully in your template (usually with an `@if`/`@else` block).
 
@@ -81,24 +81,18 @@ export class UserService {
 **2. User Display Component**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  Input,
-  OnInit,
-} from "@angular/core";
+import { Component, inject, input } from "@angular/core";
 import { AsyncPipe } from "@angular/common"; // the async pipe itself
+import { toObservable } from "@angular/core/rxjs-interop";
+import { Observable, switchMap } from "rxjs";
 import { UserService, UserProfile } from "./user.service"; // Adjust path
-import { Observable, EMPTY } from "rxjs"; // Import Observable and EMPTY
 
 @Component({
   selector: "app-user-display",
   imports: [AsyncPipe],
   template: `
     <div class="user-card">
-      <h4>User Profile (ID: {{ userId }})</h4>
+      <h4>User Profile (ID: {{ userId() }})</h4>
 
       <!-- Use the async pipe here -->
       @if (user$ | async; as user) {
@@ -108,11 +102,6 @@ import { Observable, EMPTY } from "rxjs"; // Import Observable and EMPTY
           <p><strong>Username:</strong> {{ user.username }}</p>
           <p><strong>Email:</strong> {{ user.email }}</p>
         </div>
-        <!-- Optional: Show raw data -->
-        <!-- <details>
-          <summary>Raw Data</summary>
-          <pre>{{ user | json }}</pre>
-        </details> -->
       } @else {
         <!-- This shows before the observable emits -->
         <p>Loading user data...</p>
@@ -120,51 +109,17 @@ import { Observable, EMPTY } from "rxjs"; // Import Observable and EMPTY
       <!-- Note: Error handling needs separate logic or wrapping the source -->
     </div>
   `,
-  // No 'styles' section
-  changeDetection: ChangeDetectionStrategy.OnPush, // Good practice with async pipe/observables
 })
-export class UserDisplayComponent implements OnInit {
-  private userService = inject(UserService);
+export class UserDisplayComponent {
+  private readonly userService = inject(UserService);
 
-  @Input({ required: true }) userId!: number; // Get user ID from parent
+  readonly userId = input.required<number>(); // signal input from the parent
 
-  // Expose the Observable directly to the template
-  user$: Observable<UserProfile> = EMPTY; // Initialize with EMPTY or handle null later
-
-  ngOnInit() {
-    // Assign the observable in ngOnInit (or wherever appropriate)
-    // NO .subscribe() here for the template binding!
-    this.user$ = this.userService.getUser(this.userId);
-    console.log(
-      `UserDisplayComponent (ID: ${this.userId}): Assigned observable to user$`,
-    );
-  }
-
-  // --- Compare with manual subscription (for illustration) ---
-  // // Manual Approach (requires more code + manual unsubscription handling):
-  // private destroyRef = inject(DestroyRef);
-  // userSignal = signal<UserProfile | null>(null);
-  // loading = signal<boolean>(false);
-
-  // ngOnInitManual() {
-  //   this.loading.set(true);
-  //   this.userService.getUser(this.userId)
-  //     .pipe(
-  //       takeUntilDestroyed(this.destroyRef) // Need manual unsubscribe handling
-  //     )
-  //     .subscribe({
-  //       next: (user) => {
-  //         this.userSignal.set(user); // Store in component state
-  //         this.loading.set(false);
-  //       },
-  //       error: (err) => {
-  //         console.error(err);
-  //         this.loading.set(false);
-  //         // Handle error state...
-  //       }
-  //     });
-  // }
-  // // Then in template you'd bind to userSignal() and loading()
+  // Derive the stream from the input signal.
+  // NO .subscribe() here: the template's async pipe is the only consumer.
+  protected readonly user$: Observable<UserProfile> = toObservable(
+    this.userId,
+  ).pipe(switchMap((id) => this.userService.getUser(id)));
 }
 ```
 
@@ -193,18 +148,17 @@ export class AppComponent {}
 **Explanation:**
 
 1.  `UserService` provides a `getUser(id)` method that returns an `Observable<UserProfile>`. It includes caching and `shareReplay` for efficiency.
-2.  `UserDisplayComponent` gets a `userId` via `@Input`.
-3.  In `ngOnInit`, it calls `userService.getUser(this.userId)` and assigns the **returned Observable directly** to the public component property `user$`. **Crucially, there is no `.subscribe()` call here.**
-4.  In the template:
+2.  `UserDisplayComponent` declares a required `userId` **input signal** and derives `user$` from it in a field initializer: `toObservable(this.userId)` turns the input into a stream, and `switchMap` fetches the matching user, cancelling a stale request if the parent changes the id. **Crucially, there is no `.subscribe()` call anywhere in the class.**
+3.  In the template:
     - `@if (user$ | async; as user)`: This is the core line.
       - `user$ | async`: The `async` pipe subscribes to the `user$` observable. Initially, it returns `null`.
       - `as user`: If/when the `user$` observable emits a value, that value (the `UserProfile` object) is assigned to a local template variable named `user`.
       - The `@if` block only renders its content when `user$ | async` produces a "truthy" value (i.e., after the user profile has been emitted).
     - Inside the `@if` block, we can directly access properties of the resolved `user` object (e.g., `user.name`, `user.email`).
     - The `@else` block handles the initial state, showing "Loading user data..." until the `async` pipe receives the first emission.
-5.  When the `UserDisplayComponent` is destroyed (e.g., navigated away from), the `async` pipe automatically cleans up its subscription to `user$`.
+4.  When the `UserDisplayComponent` is destroyed (e.g., navigated away from), the `async` pipe automatically cleans up its subscription to `user$`.
 
-Compare this component's TypeScript code to the commented-out `ngOnInitManual` example. The `async` pipe version is much cleaner and less error-prone for simply displaying the data.
+No `changeDetection` configuration is needed: `OnPush` is Angular's default strategy, and the async pipe's `markForCheck()` call is exactly the notification `OnPush` waits for. (Opting a component out to `ChangeDetectionStrategy.Eager` is reserved for legacy code that mutates plain fields without notifying Angular.) For the manual-subscription alternative and when to prefer it, see "Async Pipe or toSignal?" below.
 
 ## Error Handling
 
@@ -223,7 +177,11 @@ In signals-first codebases `toSignal` is becoming the default; the `async` pipe 
 
 ??? question "What does the async pipe actually do under the hood?"
 
-    It subscribes on first evaluation, stores the latest value, calls `markForCheck()` on each emission so OnPush components re-render, and unsubscribes in its `ngOnDestroy`. That last part is why it is the standard answer to "how do you avoid subscription leaks in templates?"
+    It subscribes on first evaluation, stores the latest value, calls `markForCheck()` on each emission so the component (OnPush by default) re-renders, and unsubscribes in its `ngOnDestroy`. That last part is why it is the standard answer to "how do you avoid subscription leaks in templates?"
+
+??? question "Why does the async pipe still work without Zone.js?"
+
+    Because `markForCheck()` is one of the notification sources zoneless change detection listens to (alongside signal writes read by templates, `ComponentRef.setInput`, and bound listeners). The pipe never depended on Zone.js patching; it always told Angular explicitly. That is also why a manual `subscribe` that assigns a plain field breaks under zoneless while the same stream through the async pipe keeps rendering.
 
 ??? question "Why can multiple async pipes on the same Observable be a problem?"
 

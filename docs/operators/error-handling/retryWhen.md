@@ -179,14 +179,7 @@ export class UserService {
 **2. User Profile Component**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  OnInit,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { UserService, UserData } from "./user.service"; // Adjust path if needed
 import { EMPTY, catchError, tap, finalize } from "rxjs";
@@ -213,12 +206,13 @@ import { EMPTY, catchError, tap, finalize } from "rxjs";
       Load Profile (retryWhen)
     </button>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserProfileRetryWhenComponent {
   // Renamed component
-  private userService = inject(UserService);
-  private destroyRef = inject(DestroyRef);
+  private readonly userService = inject(UserService);
+  // loadProfile() runs from the template, outside any injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- State Signals ---
   userProfile = signal<UserData | null>(null);

@@ -18,13 +18,14 @@ After that initial combination, _any time_ any _one_ of the sources sends out a 
     - **Signature:** `combineLatest([a$, b$, ...])` or the readable dictionary form `combineLatest({ a: a$, b: b$ })`
     - **Use when:** deriving state from several live inputs: filters + data, route params + settings
     - **Avoid when:** you need one snapshot of completing calls (`forkJoin`) or index-wise pairing (`zip`)
-    - **Top gotcha:** it emits nothing until **every** source has emitted at least once; one silent source blocks the whole combination (fix with `startWith`)
+    - **Top gotcha:** it emits nothing until **every** source has emitted at least once; a silent source that never completes blocks the whole combination forever (fix with `startWith`), while a source that completes without emitting makes it complete silently instead of hanging
 
 ## Key Characteristics
 
 1.  **Waits for Initial Values:** It won't emit anything until _all_ input Observables have emitted at least one value.
 2.  **Emits Latest Combination:** Once initialized, it emits an array containing the most recent value from each input Observable.
 3.  **Reacts to Any Input:** As soon as _any_ of the input Observables emits a new value, `combineLatest` emits a new array with the updated combination.
+4.  **Empty-Completion Behavior:** A source that completes without ever emitting makes `combineLatest` complete immediately with no output; the "hangs forever" intuition only applies to silent sources that never complete.
 
 ## Minimal Example
 

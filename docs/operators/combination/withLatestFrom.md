@@ -56,7 +56,7 @@ saves$.next("save"); // ["save", "draft v2"]
 Let's see how this looks in an Angular component:
 
 ```typescript
-import { Component, inject, DestroyRef, OnInit, signal } from "@angular/core";
+import { Component, signal } from "@angular/core";
 import { ReactiveFormsModule, FormControl } from "@angular/forms";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import {
@@ -93,18 +93,22 @@ import {
     }
   `,
 })
-export class ProductSearchComponent implements OnInit {
-  // --- Dependencies ---
-  private destroyRef = inject(DestroyRef); // For automatic unsubscription
-
+export class ProductSearchComponent {
   // --- Form Controls ---
-  searchTermControl = new FormControl("", { nonNullable: true });
-  categoryFilterControl = new FormControl("all", { nonNullable: true });
+  protected readonly searchTermControl = new FormControl("", {
+    nonNullable: true,
+  });
+  protected readonly categoryFilterControl = new FormControl("all", {
+    nonNullable: true,
+  });
 
   // --- Component State ---
-  searchResults = signal<{ term: string; category: string } | null>(null);
+  protected readonly searchResults = signal<{
+    term: string;
+    category: string;
+  } | null>(null);
 
-  ngOnInit(): void {
+  constructor() {
     // --- Observables ---
     // Source: Search term, debounced
     const searchTerm$ = this.searchTermControl.valueChanges.pipe(
@@ -121,7 +125,7 @@ export class ProductSearchComponent implements OnInit {
     searchTerm$
       .pipe(
         withLatestFrom(categoryFilter$), // Combine search term with the LATEST category
-        takeUntilDestroyed(this.destroyRef), // Auto-unsubscribe when component is destroyed
+        takeUntilDestroyed(), // constructor is an injection context
       )
       .subscribe(([term, category]) => {
         // Runs ONLY when searchTerm$ emits (after debounce),
@@ -145,11 +149,10 @@ export class ProductSearchComponent implements OnInit {
 2.  **`searchTerm$`:** We get an Observable of the search term's changes using `valueChanges`. We apply:
     - `debounceTime(400)`: To wait until the user stops typing for 400ms before considering the term stable.
     - `distinctUntilChanged()`: To avoid triggering searches if the debounced term is the same as the last one.
-    - `startWith()`: To ensure the stream has an initial value so `withLatestFrom` can emit right away if the category also has a value. This makes the initial state work correctly.
-3.  **`categoryFilter$`:** We get an Observable of the category changes using `valueChanges`. We also use `startWith()` here for the initial value.
+3.  **`categoryFilter$`:** We get an Observable of the category changes using `valueChanges`, plus `startWith(control.value)` so the stream has a value before the user touches the dropdown. This seed is essential, and it belongs on the **secondary** stream: `withLatestFrom` silently drops source emissions until every secondary has produced at least one value, so without it, early searches would vanish.
 4.  **`withLatestFrom(categoryFilter$)`:** We pipe the `searchTerm$` (our source). When `searchTerm$` emits a value (after debouncing), `withLatestFrom` looks at `categoryFilter$` and gets its _most recently emitted value_.
 5.  **`subscribe(([term, category]) => ...)`:** The result is an array `[sourceValue, latestOtherValue]`. We destructure this into `term` and `category`. This callback function is executed _only_ when the debounced search term changes. Inside, we have exactly what we need: the current search term and the _latest_ selected category at that moment.
-6.  **`takeUntilDestroyed(this.destroyRef)`:** This is the modern Angular way to handle unsubscriptions. When the `ProductSearchComponent` is destroyed, this operator automatically completes the Observable stream, preventing memory leaks without manual cleanup.
+6.  **`takeUntilDestroyed()`:** This is the modern Angular way to handle unsubscriptions. Called with no arguments here because the constructor is an injection context; when the `ProductSearchComponent` is destroyed, this operator automatically completes the Observable stream, preventing memory leaks without manual cleanup.
 
 So, `withLatestFrom()` is incredibly useful when an action (like searching) depends on the latest state of other configuration or filter inputs at the exact moment the action is triggered.
 

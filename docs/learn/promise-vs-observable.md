@@ -61,7 +61,7 @@ In modern Angular, while you _can_ use Promises, Observables are generally prefe
 ## Converting Between Them
 
 - **Promise to Observable:** [`from(promise)`](../operators/creation/from.md). Remember the promise is still eager and non-cancellable underneath.
-- **Observable to Promise:** `firstValueFrom(obs$)` resolves with the first emission; `lastValueFrom(obs$)` waits for completion and resolves with the final value. Both reject if the source errors, or completes without a value. The old `.toPromise()` method is deprecated and removed in current RxJS; mentioning its replacements is an easy interview win.
+- **Observable to Promise:** `firstValueFrom(obs$)` resolves with the first emission; `lastValueFrom(obs$)` waits for completion and resolves with the final value. Both reject if the source errors, or completes without a value. The old `.toPromise()` method is deprecated and slated for removal in the next major version; it still exists in current RxJS, but knowing its replacements is an easy interview win.
 
 ## Interview Q&A
 
@@ -71,7 +71,7 @@ In modern Angular, while you _can_ use Promises, Observables are generally prefe
 
 ??? question "How do you convert an Observable to a Promise in current RxJS, and what happened to toPromise()?"
 
-    `firstValueFrom` and `lastValueFrom`. `toPromise()` was deprecated and removed, partly because its behavior on empty completion (resolving with `undefined`) was ambiguous; `lastValueFrom` rejects with `EmptyError` instead, making the empty case explicit.
+    `firstValueFrom` and `lastValueFrom`. `toPromise()` is deprecated and slated for removal in the next major version (it still works today), partly because its behavior on empty completion (resolving with `undefined`) was ambiguous; `lastValueFrom` rejects with `EmptyError` instead, making the empty case explicit.
 
 ??? question "Can a Promise be cancelled?"
 

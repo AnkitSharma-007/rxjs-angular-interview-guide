@@ -147,14 +147,7 @@ export class ActionSimulatorComponent {
 **3. Activity Log Display Component - Shows Logs**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  OnInit,
-  DestroyRef,
-  ChangeDetectionStrategy,
-} from "@angular/core";
+import { Component, inject, signal } from "@angular/core";
 import { DatePipe } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { ActivityLogService, LogEntry } from "./activity-log.service"; // Adjust path
@@ -196,24 +189,22 @@ import { ActivityLogService, LogEntry } from "./activity-log.service"; // Adjust
       }
     `,
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ActivityDisplayComponent implements OnInit {
-  private logService = inject(ActivityLogService);
-  private destroyRef = inject(DestroyRef);
+export class ActivityDisplayComponent {
+  private readonly logService = inject(ActivityLogService);
 
   // Expose buffer size to template (public readonly field on the service)
-  bufferSize = this.logService.logBufferSize;
+  protected readonly bufferSize = this.logService.logBufferSize;
 
   // Use a signal to hold the logs for the template
-  logMessages = signal<LogEntry[]>([]);
+  protected readonly logMessages = signal<LogEntry[]>([]);
 
-  ngOnInit(): void {
+  constructor() {
     // Subscribe to the log entries from the service
     this.logService.logEntries$
       .pipe(
-        // Automatically unsubscribe when the component is destroyed
-        takeUntilDestroyed(this.destroyRef),
+        // constructor runs in an injection context, so no DestroyRef needed
+        takeUntilDestroyed(),
       )
       .subscribe((entry) => {
         // *** Key Point ***
@@ -279,7 +270,7 @@ export class AppComponent {
 
 1.  `ActivityLogService` creates a `ReplaySubject` configured to buffer the last 5 (`logBufferSize`) `LogEntry` objects.
 2.  When `addLog` is called (by `ActionSimulatorComponent` or directly), the new `LogEntry` is pushed into the `logSubject`. It's stored in the buffer (replacing the oldest if the buffer is full) and sent to any _currently subscribed_ components.
-3.  When `ActivityDisplayComponent` initializes (`ngOnInit`), it subscribes to `logService.logEntries$`.
+3.  When `ActivityDisplayComponent` initializes, its constructor subscribes to `logService.logEntries$`.
 4.  **Crucially:** The `ReplaySubject` immediately replays its buffered messages (up to 5 of the most recent ones, including the "Application session started." log added in the `AppComponent` constructor) to the new subscription in `ActivityDisplayComponent`. The component doesn't start with an empty list; it gets the recent history right away.
 5.  As new logs are added via `addLog`, they are pushed live to the `ActivityDisplayComponent`'s subscription and added to its display.
 

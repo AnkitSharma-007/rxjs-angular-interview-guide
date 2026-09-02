@@ -48,7 +48,7 @@ Imagine you have an Observable representing a sequence of operations that must f
 ## Code Snippet
 
 ```typescript
-import { Component, OnInit } from "@angular/core";
+import { Component, signal } from "@angular/core";
 import { of, last, catchError, EMPTY, throwError } from "rxjs";
 import { EmptyError } from "rxjs";
 
@@ -57,19 +57,22 @@ import { EmptyError } from "rxjs";
   template: `
     <h4>Last Operator Demo</h4>
     <p>Getting the final score from a completed round. Check console.</p>
-    <p>Result: {{ finalScoreStatus }}</p>
+    <p>Result: {{ finalScoreStatus() }}</p>
   `,
 })
-export class LastDemoComponent implements OnInit {
-  finalScoreStatus = "Waiting for round to complete...";
+export class LastDemoComponent {
+  protected readonly finalScoreStatus = signal(
+    "Waiting for round to complete...",
+  );
 
-  ngOnInit(): void {
+  constructor() {
     const roundScores$ = of(10, 50, 20, 100); // Finite, completes after 100
 
     console.log(
       `[${new Date().toLocaleTimeString()}] Subscribing to get final score...`,
     );
 
+    // no teardown needed: last() emits at completion, then the stream ends
     roundScores$
       .pipe(
         last(), // No predicate, just get the very last value
@@ -78,14 +81,14 @@ export class LastDemoComponent implements OnInit {
             console.warn(
               `[${new Date().toLocaleTimeString()}] Source completed without emitting values.`,
             );
-            this.finalScoreStatus = "Round completed with no scores.";
+            this.finalScoreStatus.set("Round completed with no scores.");
             return EMPTY;
           } else {
             console.error(
               `[${new Date().toLocaleTimeString()}] Stream error:`,
               error,
             );
-            this.finalScoreStatus = `Error: ${error.message}`;
+            this.finalScoreStatus.set(`Error: ${error.message}`);
             return throwError(() => error);
           }
         }),
@@ -95,7 +98,7 @@ export class LastDemoComponent implements OnInit {
           console.log(
             `[${new Date().toLocaleTimeString()}] Final score received: ${finalScore}`,
           );
-          this.finalScoreStatus = `Final Score: ${finalScore}`;
+          this.finalScoreStatus.set(`Final Score: ${finalScore}`);
         },
         complete: () => {
           console.log(

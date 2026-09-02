@@ -13,7 +13,7 @@ However, `share` behaves like it's using a plain `Subject` internally for multic
 1.  **Shares a Single Subscription:** It subscribes to the source Observable only when the _first_ subscriber arrives.
 2.  **Multicasts Live Values:** It pushes values from the source to all _currently active_ subscribers.
 3.  **No Replay:** If a subscriber joins _after_ the source has already emitted some values, that new subscriber **will not** receive those past values. They will only get emissions that happen _after_ they subscribed.
-4.  **Reference Counting:** It uses reference counting (`refCount` is implicitly true). The subscription to the source is active only as long as there's at least one downstream subscriber. When the last subscriber leaves, `share` unsubscribes from the source. If a new subscriber arrives later, it will re-subscribe to the source, potentially restarting it.
+4.  **Reference Counting & Resets:** `share()` tracks its subscribers and unsubscribes from the source when the count drops to zero (`resetOnRefCountZero: true`, the default). It also resets when the source **completes or errors** (`resetOnComplete: true`, `resetOnError: true`), so a subscriber arriving after completion re-executes the source instead of joining a finished one. If a new subscriber arrives later, it re-subscribes to the source, potentially restarting it.
 
 !!! abstract "At a glance"
 
@@ -109,14 +109,7 @@ export class SharedTimerService {
 **2. Component Displaying Ticks**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  OnInit,
-  OnDestroy,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { SharedTimerService } from "./timer.service"; // Adjust path
 
@@ -133,16 +126,15 @@ import { SharedTimerService } from "./timer.service"; // Adjust path
     ".display-box { border: 1px solid purple; padding: 10px; margin: 10px; }",
   ],
 })
-export class TickDisplayAComponent implements OnInit {
-  private timerService = inject(SharedTimerService);
-  private destroyRef = inject(DestroyRef);
+export class TickDisplayAComponent {
+  private readonly timerService = inject(SharedTimerService);
 
-  lastTick = signal<number | string>("Waiting...");
+  protected readonly lastTick = signal<number | string>("Waiting...");
 
-  ngOnInit(): void {
+  constructor() {
     console.log("TickDisplayA: Subscribing to sharedTicks$");
     this.timerService.sharedTicks$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntilDestroyed())
       .subscribe((tickValue) => {
         console.log(`TickDisplayA: Received tick ${tickValue}`);
         this.lastTick.set(tickValue);
@@ -154,14 +146,7 @@ export class TickDisplayAComponent implements OnInit {
 **3. Another Component Displaying Ticks - Subscribes Late**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  OnInit,
-  OnDestroy,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { SharedTimerService } from "./timer.service"; // Adjust path
 
@@ -178,13 +163,15 @@ import { SharedTimerService } from "./timer.service"; // Adjust path
     ".display-box { border: 1px solid purple; padding: 10px; margin: 10px; }",
   ],
 })
-export class TickDisplayBComponent implements OnInit {
-  private timerService = inject(SharedTimerService);
-  private destroyRef = inject(DestroyRef);
+export class TickDisplayBComponent {
+  private readonly timerService = inject(SharedTimerService);
+  // the setTimeout callback is NOT an injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef there
+  private readonly destroyRef = inject(DestroyRef);
 
-  lastTick = signal<number | string>("Waiting...");
+  protected readonly lastTick = signal<number | string>("Waiting...");
 
-  ngOnInit(): void {
+  constructor() {
     // Simulate this component loading or deciding to subscribe later
     setTimeout(() => {
       console.log("TickDisplayB: Subscribing to sharedTicks$ (after delay)");
@@ -224,8 +211,8 @@ export class AppComponent {}
 **Explanation:**
 
 1.  `SharedTimerService` creates an `interval(2000)` Observable and applies `share()` to it, storing the result in `sharedTicks$`.
-2.  `TickDisplayAComponent` subscribes immediately in `ngOnInit`. This is the first subscription. `share` subscribes to the source `interval`, which starts emitting 0, 1, 2... every 2 seconds. Component A receives all these ticks.
-3.  `TickDisplayBComponent` waits 5 seconds before subscribing in its `ngOnInit`.
+2.  `TickDisplayAComponent` subscribes immediately in its constructor. This is the first subscription. `share` subscribes to the source `interval`, which starts emitting 0, 1, 2... every 2 seconds. Component A receives all these ticks.
+3.  `TickDisplayBComponent` waits 5 seconds before subscribing.
 4.  When Component B subscribes, the source `interval` (shared via `share`) is already running and might have already emitted ticks 0 and 1.
 5.  Component B **will not** receive ticks 0 and 1. Its subscription will start receiving ticks from the _next_ emission of the shared interval (likely tick 2 or 3, depending on timing).
 6.  Both components receive subsequent ticks (3, 4, 5...) simultaneously as they are emitted by the single, shared interval.

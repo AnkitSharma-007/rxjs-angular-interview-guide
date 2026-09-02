@@ -37,7 +37,7 @@ Remember, Cold Observables only start when you subscribe, and each subscription 
 
 ## Examples in Angular/RxJS
 
-1.  **DOM Events using `fromEvent`:** Observables created from browser events are inherently hot.
+1.  **DOM Events using `fromEvent`:** Observables created from browser events are inherently hot: the events happen whether or not anyone subscribed, and late subscribers miss earlier clicks. (One precision worth knowing: each `fromEvent` subscriber installs its **own** event listener, so the subscription itself is unicast; see [Unicast vs Multicast](unicast-vs-multicast.md).)
 
     ```typescript
     import {
@@ -113,7 +113,8 @@ Remember, Cold Observables only start when you subscribe, and each subscription 
       constructor() {
         console.log("UserService: Setting up shared user profile fetch.");
         this.userProfile$ = this.http.get("/api/user/profile").pipe(
-          shareReplay(1), // Cache the latest value and share across subscribers
+          // explicit config beats bare shareReplay(1); see the shareReplay page
+          shareReplay({ bufferSize: 1, refCount: true }),
         );
       }
 

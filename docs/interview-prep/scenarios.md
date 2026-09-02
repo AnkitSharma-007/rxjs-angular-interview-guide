@@ -71,6 +71,7 @@ forkJoin({
 this.route.paramMap.pipe(
   map((p) => p.get("id")!),
   switchMap((id) => this.api.getUser(id)),
+  takeUntilDestroyed(),
 );
 ```
 

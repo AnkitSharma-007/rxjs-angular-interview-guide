@@ -113,6 +113,16 @@ export class ResultsComponent {
 
 **Coalescing caveat:** `toObservable` observes the signal with an effect, so several synchronous `set()` calls produce **one** emission with the final value. It is a state bridge, not an event log; if every event matters, keep a `Subject` as the source of truth.
 
+**"Why not `debounced()`?"** Angular ships a (currently experimental) `debounced()` helper that debounces a signal's value, and Signal Forms has its own field-level debouncing. For the plain search case, a debounced signal driving `httpResource` is a legitimate composition: the debounce settles the parameter and `httpResource` cancels the stale request on each change. The stream pipeline earns its place when the requirement grows past that pairing: skipping unchanged values (`distinctUntilChanged`), retry with backoff, combining several inputs, cancelling non-HTTP work (any inner Observable, not just requests), or keeping the entire policy in one reviewable pipeline. Naming that boundary, rather than defending RxJS reflexively, is the strong interview answer. Full decision guide: [RxJS or the Resource API?](rxjs-vs-resource.md)
+
+## The Rest of the Interop Package
+
+Three more exports round out `@angular/core/rxjs-interop`, and all are fair interview game precisely because they live in the RxJS interop layer:
+
+- **`outputFromObservable(stream$)`**: exposes a stream as a component output, so `(saved)="..."` event bindings work against an RxJS pipeline. The natural "how do you emit a debounced output?" answer: build the pipeline, wrap it once. Its inverse, **`outputToObservable(componentRef.instance.saved)`**, turns any output back into a stream for composition.
+- **`pendingUntilEvent()`**: an operator that keeps a server-rendered app "unstable" until the observable emits, completes, errors, or is unsubscribed, so serialization waits for the data. It is the RxJS-shaped half of the SSR-stability story and a strong senior mention.
+- **`rxResource()`**: the Observable-loader variant of the Resource API, covered on [RxJS or the Resource API?](rxjs-vs-resource.md)
+
 ## Common Mistakes
 
 **Calling `toSignal` outside an injection context.** In a method or callback it throws (or, with a manually passed injector, silently creates long-lived subscriptions per call). Create interop signals in field initializers or the constructor.
@@ -137,6 +147,7 @@ export class ResultsComponent {
 
 ## Related
 
+- [RxJS or the Resource API?](rxjs-vs-resource.md), the boundary this page's pipelines sit on
 - [Async Pipe](async-pipe.md), the template-side alternative to toSignal
 - [BehaviorSubject](../subjects/behaviorSubject.md), the RxJS state-holder signals often replace
 - [switchMap](../operators/transformation/switchMap.md) and [debounceTime](../operators/filtering/debounceTime.md), the stream tools worth bridging for

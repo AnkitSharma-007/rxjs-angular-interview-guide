@@ -70,13 +70,7 @@ This is the classic example. We fetch data, show a loading indicator, and use `f
 ### Code Snippet
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { CurrencyPipe } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import {
@@ -154,10 +148,11 @@ function mockFetchProducts(
       }
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductListComponent {
-  private destroyRef = inject(DestroyRef);
+  // loadProducts() runs from the template, outside any injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- State Signals ---
   loading = signal<boolean>(false);

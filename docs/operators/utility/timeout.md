@@ -7,14 +7,14 @@ tags:
 
 # timeout
 
-The `timeout` operator sets a time limit. If the source Observable doesn't emit its **first value** or **complete** within that specified duration, the `timeout` operator will cause the stream to **emit a `TimeoutError`** and terminate.
+The `timeout` operator sets a time limit on **every gap** in a stream. `timeout(n)` is shorthand for `timeout({ each: n })`: if more than `n` milliseconds pass between the subscription and the first value, or between any two consecutive values, the operator **emits a `TimeoutError`** and terminates the stream. To bound only the wait for the first value, use `timeout({ first: n })`.
 
-Think of it like setting an **egg timer** for an operation:
+Think of it like setting an **egg timer** that you rewind after every delivery:
 
 - You start an operation (subscribe to the source Observable).
 - You start the timer (`timeout` operator).
-- If the operation finishes (emits a value or completes) _before_ the timer goes off, everything is fine.
-- If the timer goes off _before_ the operation finishes, the timer rings loudly (`TimeoutError` is emitted), and you stop waiting for the original operation.
+- Every time a value arrives _before_ the timer goes off, the timer resets and the wait starts over.
+- If the timer goes off first, it rings loudly (`TimeoutError` is emitted), and you stop waiting for the original operation.
 
 ## Key Configurations & Behaviors
 
@@ -92,13 +92,7 @@ export class SlowDataService {
 **2. Data Fetching Component (Applies `timeout`)**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { JsonPipe } from "@angular/common";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { SlowDataService, ExternalData } from "./slow-data.service"; // Adjust path
@@ -132,11 +126,12 @@ import { EMPTY, TimeoutError, catchError, finalize, tap, timeout } from "rxjs";
     </div>
   `,
   // No 'styles' section as per previous request
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DataFetcherComponent {
-  private dataService = inject(SlowDataService);
-  private destroyRef = inject(DestroyRef);
+  private readonly dataService = inject(SlowDataService);
+  // getData() runs from the template, outside any injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- State Signals ---
   loading = signal<boolean>(false);

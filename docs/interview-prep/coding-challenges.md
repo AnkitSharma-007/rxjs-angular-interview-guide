@@ -84,7 +84,7 @@ Live-coding rounds ask for small, precise pipelines. Write each one yourself (ed
 
     Without `startWith`, nothing emits until **both** controls have been touched, the classic `combineLatest` trap.
 
-## 6. Retry a request 3 times with exponential backoff, then fall back to a default
+## 6. Retry a request up to 3 times (4 attempts total) with exponential backoff, then fall back to a default
 
 ??? example "Solution"
 
@@ -98,7 +98,7 @@ Live-coding rounds ask for small, precise pipelines. Write each one yourself (ed
     );
     ```
 
-    1s, 2s, 4s delays; `retry` before `catchError` or there is nothing left to retry.
+    `count: 3` means three retries after the initial attempt, four requests worst case, with 1s, 2s, 4s delays; `retry` before `catchError` or there is nothing left to retry.
 
 ## 7. Click counter with a reset button
 

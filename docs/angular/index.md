@@ -12,6 +12,7 @@ RxJS is woven into Angular: `HttpClient` returns Observables, reactive forms exp
 
 - **[Async Pipe](async-pipe.md)**: let the template subscribe and unsubscribe for you, and avoid the most common source of memory leaks.
 - **[Signals & RxJS Interop](signals-interop.md)**: `toSignal`, `toObservable`, and deciding when signals replace RxJS.
+- **[RxJS or the Resource API?](rxjs-vs-resource.md)**: when `resource`/`httpResource` are enough, when streams win, and `rxResource` as the bridge.
 - **[HttpClient Patterns](http-patterns.md)**: loading/error/success state, sequential and parallel requests, cancellation, and resilient pipelines.
 - **[Reactive Forms](reactive-forms.md)**: `valueChanges` pipelines for debounced search, autosave, and dependent fields.
 - **[Router](router.md)**: `paramMap` + `switchMap`, router events, and the component-reuse gotcha.

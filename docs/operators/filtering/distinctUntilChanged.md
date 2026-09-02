@@ -107,7 +107,7 @@ export class DistinctSearchComponent {
 
 ## Common Mistakes
 
-**Comparing objects by reference.** `{ id: 1 } !== { id: 1 }`, so an object stream is never filtered by the default check. Provide a comparator, `distinctUntilChanged((a, b) => a.id === b.id)`, or use `distinctUntilKeyChanged("id")`.
+**Comparing objects by reference.** `{ id: 1 } !== { id: 1 }`, so an object stream is never filtered by the default check. Provide a comparator, `distinctUntilChanged((a, b) => a.id === b.id)`, or use `distinctUntilKeyChanged("id")`. Mind the comparator contract: return `true` when the values count as **equal**, meaning the emission is skipped. Inverting it silently passes every duplicate and drops every change.
 
 **Expecting global de-duplication.** Only consecutive repeats are dropped; `1, 2, 1` passes through untouched. Removing all duplicates ever seen is `distinct`, which also means unbounded memory for the seen-set.
 

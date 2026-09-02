@@ -128,14 +128,7 @@ export class ConfigService {
 **2. Component A - Consumes Config**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  OnInit,
-  DestroyRef,
-  ChangeDetectionStrategy,
-} from "@angular/core";
+import { Component, inject, signal } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { ConfigService, AppConfig } from "./config.service"; // Adjust path
 
@@ -155,22 +148,18 @@ import { ConfigService, AppConfig } from "./config.service"; // Adjust path
   styles: [
     ".component-box { border: 1px solid blue; padding: 10px; margin: 10px; }",
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CompAComponent implements OnInit {
-  private configService = inject(ConfigService);
-  private destroyRef = inject(DestroyRef);
+export class CompAComponent {
+  private readonly configService = inject(ConfigService);
 
-  config = signal<AppConfig | null>(null);
+  protected readonly config = signal<AppConfig | null>(null);
 
-  ngOnInit(): void {
+  constructor() {
     console.log("CompA: Subscribing to config$");
-    this.configService.config$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((cfg) => {
-        console.log("CompA: Received config", cfg);
-        this.config.set(cfg);
-      });
+    this.configService.config$.pipe(takeUntilDestroyed()).subscribe((cfg) => {
+      console.log("CompA: Received config", cfg);
+      this.config.set(cfg);
+    });
   }
 }
 ```
@@ -178,14 +167,7 @@ export class CompAComponent implements OnInit {
 **3. Component B - Consumes Config**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  OnInit,
-  DestroyRef,
-  ChangeDetectionStrategy,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { ConfigService, AppConfig } from "./config.service"; // Adjust path
 
@@ -210,15 +192,16 @@ import { ConfigService, AppConfig } from "./config.service"; // Adjust path
   styles: [
     ".component-box { border: 1px solid blue; padding: 10px; margin: 10px; }",
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CompBComponent implements OnInit {
-  private configService = inject(ConfigService);
-  private destroyRef = inject(DestroyRef);
+export class CompBComponent {
+  private readonly configService = inject(ConfigService);
+  // the setTimeout callback is NOT an injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef there
+  private readonly destroyRef = inject(DestroyRef);
 
-  config = signal<AppConfig | null>(null);
+  protected readonly config = signal<AppConfig | null>(null);
 
-  ngOnInit(): void {
+  constructor() {
     console.log("CompB: Subscribing to config$");
     // Simulate CompB loading slightly later
     setTimeout(() => {
@@ -255,7 +238,7 @@ export class AppComponent {}
 **Explanation:**
 
 1.  The `ConfigService` defines `config$`. Inside the constructor, it chains `http.get(...)` with `tap()` (for logging the fetch attempt) and then `shareReplay({ bufferSize: 1, refCount: true })`.
-2.  When `CompAComponent` initializes (`ngOnInit`), it subscribes to `configService.config$`. This is the _first_ subscription.
+2.  When `CompAComponent` initializes, its constructor subscribes to `configService.config$`. This is the _first_ subscription.
 3.  Because it's the first subscription and `refCount` is true, `shareReplay` subscribes to its source (the `http.get`). The HTTP request is made. You'll see the "Fetching application config from API..." log message **once**.
 4.  When the HTTP request completes, `shareReplay` receives the `AppConfig` data. It buffers this single value (`bufferSize: 1`) and sends it to `CompAComponent`.
 5.  A moment later, `CompBComponent` initializes and subscribes to the _same_ `configService.config$`.

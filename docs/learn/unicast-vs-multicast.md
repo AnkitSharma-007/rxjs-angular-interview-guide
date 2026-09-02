@@ -36,10 +36,12 @@ setTimeout(() => multicast$.subscribe((v) => console.log(`M-B: ${v}`)), 1500);
 
 ## The Mapping That Answers Most Interview Questions
 
-| Concept             | Producer                                      | Late subscribers                                    | Examples                                              |
-| ------------------- | --------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------- |
-| **Unicast / cold**  | Created per subscriber, inside the Observable | Get a fresh execution from the start                | `HttpClient`, `of`, `from`, `interval`, `defer`       |
-| **Multicast / hot** | One shared execution, outside or wrapped      | Join live; missed values are gone (unless replayed) | `Subject` family, `fromEvent`, `share`, `shareReplay` |
+| Concept             | Producer                                      | Late subscribers                                    | Examples                                                                               |
+| ------------------- | --------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Unicast / cold**  | Created per subscriber, inside the Observable | Get a fresh execution from the start                | `HttpClient`, `of`, `from`, `interval`, `defer`, `fromEvent` (hot producer, see below) |
+| **Multicast / hot** | One shared execution, outside or wrapped      | Join live; missed values are gone (unless replayed) | `Subject` family, `share`, `shareReplay`                                               |
+
+One entry deserves precision, because interviewers probe it: **`fromEvent` is a unicast subscription over a hot producer.** The event source (the DOM) is live and shared, so late subscribers miss earlier events, which is why the [hot observables](hot-observables.md) page uses it as an example. But each subscriber installs its **own** event listener: three subscriptions to `fromEvent(button, "click")` mean three `addEventListener` calls. One shared listener requires explicit multicasting: `fromEvent(...).pipe(share())`.
 
 Two practical consequences:
 

@@ -26,7 +26,8 @@ type State<T> =
 @Component({
   selector: "app-products",
   template: `
-    @switch (state().status) {
+    @let s = state();
+    @switch (s.status) {
       @case ("loading") {
         <p>Loading...</p>
       }
@@ -34,7 +35,7 @@ type State<T> =
         <p>Could not load products.</p>
       }
       @case ("loaded") {
-        <p>{{ $any(state()).data.length }} products</p>
+        <p>{{ s.data.length }} products</p>
       }
     }
   `,
@@ -53,7 +54,7 @@ export class ProductsComponent {
 }
 ```
 
-One stream, no boolean flag drift, exhaustive template handling. The pieces are explained on [startWith](../operators/combination/startWith.md) and [catchError](../operators/error-handling/catchError.md).
+One stream, no boolean flag drift, exhaustive template handling. The pieces are explained on [startWith](../operators/combination/startWith.md) and [catchError](../operators/error-handling/catchError.md). For the narrow "fetch on param change with loading/error state" case, Angular's `httpResource` now provides this state machine out of the box; when that is enough, and when it is not, is covered on [RxJS or the Resource API?](rxjs-vs-resource.md)
 
 ## Pattern 2: Sequential (Dependent) Requests
 

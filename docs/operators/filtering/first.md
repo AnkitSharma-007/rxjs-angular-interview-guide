@@ -53,17 +53,9 @@ Imagine your Angular application needs to load some initial configuration data w
 ## Code Snippet
 
 ```typescript
-import { Component, OnInit } from "@angular/core";
-import {
-  of,
-  first,
-  catchError,
-  EMPTY,
-  throwError,
-  timer,
-  map,
-  concat,
-} from "rxjs";
+import { Component, signal } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { first, catchError, EMPTY, throwError, timer, map, concat } from "rxjs";
 import { EmptyError } from "rxjs";
 
 @Component({
@@ -71,13 +63,13 @@ import { EmptyError } from "rxjs";
   template: `
     <h4>First Operator Demo</h4>
     <p>Looking for the first 'active' status. Check console.</p>
-    <p>Result: {{ resultStatus }}</p>
+    <p>Result: {{ resultStatus() }}</p>
   `,
 })
-export class FirstDemoComponent implements OnInit {
-  resultStatus = "Waiting...";
+export class FirstDemoComponent {
+  protected readonly resultStatus = signal("Waiting...");
 
-  ngOnInit(): void {
+  constructor() {
     const statusUpdates$ = concat(
       timer(500).pipe(map(() => "pending")),
       timer(1000).pipe(map(() => "pending")),
@@ -90,6 +82,9 @@ export class FirstDemoComponent implements OnInit {
       `[${new Date().toLocaleTimeString()}] Subscribing to find first 'active' status...`,
     );
 
+    // first() ends the stream only when a match (or completion/error)
+    // arrives; until then the timer chain is live, so tie the wait to the
+    // component's lifetime
     statusUpdates$
       .pipe(
         first((status) => status === "active"),
@@ -98,33 +93,35 @@ export class FirstDemoComponent implements OnInit {
             console.warn(
               `[${new Date().toLocaleTimeString()}] No 'active' status found before stream completed.`,
             );
-            this.resultStatus = "No active status found.";
+            this.resultStatus.set("No active status found.");
             return EMPTY;
           } else {
             console.error(
               `[${new Date().toLocaleTimeString()}] Stream error:`,
               error,
             );
-            this.resultStatus = `Error: ${error.message}`;
+            this.resultStatus.set(`Error: ${error.message}`);
             return throwError(() => error);
           }
         }),
+        takeUntilDestroyed(), // constructor is an injection context
       )
       .subscribe({
         next: (activeStatus) => {
           console.log(
             `[${new Date().toLocaleTimeString()}] Found first active status: ${activeStatus}`,
           );
-          this.resultStatus = `First active status: ${activeStatus}`;
+          this.resultStatus.set(`First active status: ${activeStatus}`);
         },
         complete: () => {
           console.log(
             `[${new Date().toLocaleTimeString()}] Stream completed by first().`,
           );
           // Note: resultStatus might already be set by next or catchError
-          if (this.resultStatus === "Waiting...") {
-            this.resultStatus =
-              "Stream completed (likely handled by catchError/default)";
+          if (this.resultStatus() === "Waiting...") {
+            this.resultStatus.set(
+              "Stream completed (likely handled by catchError/default)",
+            );
           }
         },
       });

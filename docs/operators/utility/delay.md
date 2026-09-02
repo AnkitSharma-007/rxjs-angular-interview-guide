@@ -57,13 +57,7 @@ Imagine clicking a "Save" button. The backend operation might be incredibly fast
 ## Code Snippet
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import {
   EMPTY,
@@ -126,10 +120,11 @@ function mockSaveOperation(): Observable<{
       }
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SaveStatusComponent {
-  private destroyRef = inject(DestroyRef);
+  // saveData() runs from the template, outside any injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- State Signals ---
   saving = signal<boolean>(false);
@@ -161,14 +156,15 @@ export class SaveStatusComponent {
         // ---------------------
 
         catchError((err: Error) => {
-          // Handle the error AFTER the delay
-          console.error("UI: Handling error after delay:", err.message);
+          // Handle the error immediately (errors skip the delay)
+          console.error("UI: Handling error immediately:", err.message);
           this.isSuccess.set(false);
           this.statusMessage.set(`Error: ${err.message}`);
           // Return EMPTY to gracefully complete the stream for finalize
           return EMPTY;
         }),
-        // finalize runs after delay + next/error/complete
+        // finalize runs after next/complete pass through the delay;
+        // on the error path it runs immediately, since errors are not delayed
         finalize(() => {
           console.log('UI: Finalizing save operation (hiding "Saving...")');
           this.saving.set(false);

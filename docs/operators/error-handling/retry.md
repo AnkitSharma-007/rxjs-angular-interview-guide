@@ -127,14 +127,7 @@ export class UserService {
 **2. User Profile Component (`user-profile.component.ts`)**
 
 ```typescript
-import {
-  Component,
-  inject,
-  signal,
-  ChangeDetectionStrategy,
-  OnInit,
-  DestroyRef,
-} from "@angular/core";
+import { Component, inject, signal, DestroyRef } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { UserService, UserData } from "./user.service";
 import { EMPTY, catchError, tap, finalize } from "rxjs";
@@ -159,16 +152,17 @@ import { EMPTY, catchError, tap, finalize } from "rxjs";
 
     <button (click)="loadProfile()" [disabled]="loading()">Load Profile</button>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserProfileComponent {
-  private userService = inject(UserService);
-  private destroyRef = inject(DestroyRef);
+  private readonly userService = inject(UserService);
+  // loadProfile() runs from the template, outside any injection context,
+  // so takeUntilDestroyed needs an explicit DestroyRef
+  private readonly destroyRef = inject(DestroyRef);
 
   // --- State Signals ---
-  userProfile = signal<UserData | null>(null);
-  loading = signal<boolean>(false);
-  errorMsg = signal<string | null>(null);
+  protected readonly userProfile = signal<UserData | null>(null);
+  protected readonly loading = signal<boolean>(false);
+  protected readonly errorMsg = signal<string | null>(null);
 
   loadProfile(): void {
     this.loading.set(true);
@@ -230,6 +224,13 @@ export class UserProfileComponent {
 
 **Placing `retry` after `catchError`.** `catchError` swallows the error first, so `retry` never sees one. The resilient order is `retry(...)` then `catchError(...)`.
 
+## Important Considerations for `retry`
+
+- **Don't Retry Everything:** Only retry operations that might succeed on a subsequent attempt (transient network/server errors). Don't retry things like "404 Not Found" or "400 Bad Request" errors, as retrying won't fix the underlying problem. The `delay` function in the `retry` configuration object is ideal for this conditional retrying logic.
+- **Avoid Infinite Retries:** Always specify a reasonable retry count.
+- **Side Effects:** Be very careful retrying Observables that have side effects (e.g., POST or PUT requests). Retrying might cause the action (like creating a resource) to happen multiple times. It's generally safer for idempotent requests like GET or DELETE.
+- **Delay:** Retrying immediately might not be helpful if the server needs a moment to recover. Adding a delay, possibly increasing with each retry (exponential backoff), is often recommended. The `retry({ delay: ... })` configuration makes this much easier than the older `retryWhen` operator.
+
 ## Interview Q&A
 
 ??? question "What does retry actually do under the hood?"
@@ -249,11 +250,3 @@ export class UserProfileComponent {
 - [catchError](catchError.md) for the fallback once retries are exhausted
 - [retryWhen](retryWhen.md), the deprecated predecessor kept for interview awareness
 - [timer](../creation/timer.md), the usual delay source for backoff strategies
-  - `.subscribe()`: Updates the `userProfile` signal when data is successfully received.
-
-## Important Considerations for `retry`
-
-- **Don't Retry Everything:** Only retry operations that might succeed on a subsequent attempt (transient network/server errors). Don't retry things like "404 Not Found" or "400 Bad Request" errors, as retrying won't fix the underlying problem. The `delay` function in the `retry` configuration object is ideal for this conditional retrying logic.
-- **Avoid Infinite Retries:** Always specify a reasonable retry count.
-- **Side Effects:** Be very careful retrying Observables that have side effects (e.g., POST or PUT requests). Retrying might cause the action (like creating a resource) to happen multiple times. It's generally safer for idempotent requests like GET or DELETE.
-- **Delay:** Retrying immediately might not be helpful if the server needs a moment to recover. Adding a delay, possibly increasing with each retry (exponential backoff), is often recommended. The `retry({ delay: ... })` configuration makes this much easier than the older `retryWhen` operator.
